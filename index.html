@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>อัปเดตสคริปต์ — ระบบนิเทศและประเมินการสอน</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--o:#C2410C;--o2:#EA580C;--bg:#FFF7ED;--ink:#1f2937;--mut:#6b7280;--ln:#FED7AA}
+*{box-sizing:border-box}
+body{margin:0;font-family:Sarabun,system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:17px;line-height:1.6}
+.wrap{max-width:760px;margin:0 auto;padding:20px 16px 48px}
+header{background:linear-gradient(135deg,var(--o),#FB923C);color:#fff;border-radius:18px;padding:22px 24px;margin-bottom:18px}
+header h1{margin:0 0 4px;font-size:24px}header p{margin:0;opacity:.92;font-size:15px}
+.ver{display:inline-block;margin-top:10px;background:rgba(255,255,255,.22);border-radius:99px;padding:2px 12px;font-size:14px}
+.card{background:#fff;border:1px solid var(--ln);border-radius:16px;padding:18px 20px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:18px;color:var(--o)}
+ol.steps{margin:0;padding-left:22px}ol.steps li{margin:6px 0}
+.file{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0;border-top:1px dashed var(--ln)}
+.file:first-of-type{border-top:0}
+.file .t{flex:1;min-width:180px}.file b{font-size:18px}.file small{display:block;color:var(--mut)}
+button{font:inherit;font-weight:600;border:0;border-radius:12px;padding:10px 18px;cursor:pointer}
+.cp{background:var(--o2);color:#fff}.cp:hover{background:var(--o)}
+.dl{background:#fff;color:var(--o);border:1.5px solid var(--o2)}
+.cp.ok{background:#16a34a}
+button:disabled{opacity:.5;cursor:wait}
+ul.n{margin:0;padding-left:20px}
+.note{font-size:15px;color:var(--mut)}
+.err{color:#b91c1c}
+</style></head><body><div class="wrap">
+<header><h1>อัปเดตสคริปต์ระบบนิเทศ</h1><p>ระบบนิเทศและประเมินการสอน · อบจ.ศรีสะเกษ</p>
+<span class="ver" id="ver">กำลังโหลด…</span></header>
+
+<div class="card"><h2>ขั้นตอน (ทำทีละข้อ)</h2><ol class="steps">
+<li>กดปุ่ม <b>คัดลอก</b> ของไฟล์ด้านล่าง</li>
+<li>เปิดชีทระบบ → เมนู <b>ส่วนขยาย → Apps Script</b> แล้วเปิดไฟล์ชื่อเดียวกันทางซ้าย</li>
+<li>กดคลิกในกล่องโค้ด → <b>Ctrl+A</b> (เลือกทั้งหมด) → <b>Ctrl+V</b> (วางทับ) → กดบันทึก 💾</li>
+<li>ทำซ้ำกับอีกไฟล์ให้ครบ</li>
+<li>กด <b>ทำให้ใช้งานได้ → จัดการการทำให้ใช้งานได้</b> → ✏️ → เลือก <b>เวอร์ชันใหม่</b> → <b>ทำให้ใช้งานได้</b> (ลิงก์เดิมใช้ต่อได้)</li>
+</ol></div>
+
+<div class="card"><h2>ไฟล์โค้ด</h2><div id="files"><span class="note">กำลังโหลดไฟล์…</span></div></div>
+
+<div class="card"><h2>เวอร์ชันนี้แก้อะไร</h2><ul class="n" id="notes"></ul></div>
+<p class="note" id="msg"></p>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const bust=()=>'?t='+Date.now();
+const cache={};
+async function getText(p){
+  if(cache[p])return cache[p];
+  const r=await fetch(p+bust(),{cache:'no-store'});
+  if(!r.ok)throw new Error(p+' '+r.status);
+  return cache[p]=await r.text();
+}
+async function copy(text){
+  try{await navigator.clipboard.writeText(text);return true}catch(e){}
+  const t=document.createElement('textarea');t.value=text;t.style.cssText='position:fixed;opacity:0';
+  document.body.appendChild(t);t.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}
+  t.remove();return ok;
+}
+function kb(s){return (new Blob([s]).size/1024).toFixed(0)+' KB'}
+(async()=>{
+  try{
+    const v=await (await fetch('version.json'+bust(),{cache:'no-store'})).json();
+    $('ver').textContent='เวอร์ชัน '+v.version+' · '+v.date;
+    $('notes').innerHTML=v.notes.map(n=>'<li>'+n.replace(/</g,'&lt;')+'</li>').join('');
+    const box=$('files');box.innerHTML='';
+    for(const f of v.files){
+      const d=document.createElement('div');d.className='file';
+      d.innerHTML='<div class="t"><b></b><small></small></div><button class="cp">คัดลอก</button><button class="dl">ดาวน์โหลด</button>';
+      d.querySelector('b').textContent=f.label;d.querySelector('small').textContent=f.hint;
+      const cp=d.querySelector('.cp'),dl=d.querySelector('.dl');
+      cp.onclick=async()=>{
+        cp.disabled=true;const old=cp.textContent;cp.textContent='กำลังคัดลอก…';
+        try{const s=await getText(f.path);const ok=await copy(s);
+          cp.textContent=ok?'คัดลอกแล้ว ✓':'คัดลอกไม่สำเร็จ';cp.classList.toggle('ok',ok);
+          d.querySelector('small').textContent=f.hint+' · '+kb(s);
+        }catch(e){cp.textContent='โหลดไม่ได้';}
+        cp.disabled=false;setTimeout(()=>{cp.textContent=old;cp.classList.remove('ok')},2500);
+      };
+      dl.onclick=async()=>{const s=await getText(f.path);const a=document.createElement('a');
+        a.href=URL.createObjectURL(new Blob([s],{type:'text/plain;charset=utf-8'}));a.download=f.label;a.click()};
+      box.appendChild(d);
+    }
+  }catch(e){$('ver').textContent='โหลดข้อมูลไม่สำเร็จ';$('msg').innerHTML='<span class="err">โหลดไม่สำเร็จ กรุณารีเฟรชหน้านี้</span>'}
+})();
+</script></body></html>
