@@ -29,15 +29,22 @@ ul.n{margin:0;padding-left:20px}
 <header><h1>อัปเดตสคริปต์ระบบนิเทศ</h1><p>ระบบนิเทศและประเมินการสอน · อบจ.ศรีสะเกษ</p>
 <span class="ver" id="ver">กำลังโหลด…</span></header>
 
+<div class="card"><h2>ดูวิธีทำ (วิดีโอสั้น ๆ)</h2>
+<video controls preload="metadata" playsinline poster="media/poster.jpg" style="width:100%;border-radius:12px;background:#000"><source src="media/update-howto.mp4" type="video/mp4"></video>
+<p class="note" style="margin:8px 0 0">ไม่มีเสียงพูด ดูจากคำบรรยายใต้ภาพ</p></div>
+
 <div class="card"><h2>ขั้นตอน (ทำทีละข้อ)</h2><ol class="steps">
+<li><b>สำรองไฟล์ก่อน:</b> ในชีท เมนู ไฟล์ → ทำสำเนา (เก็บไว้เผื่อต้องย้อนกลับ)</li>
 <li>กดปุ่ม <b>คัดลอก</b> ของไฟล์ด้านล่าง</li>
 <li>เปิดชีทระบบ → เมนู <b>ส่วนขยาย → Apps Script</b> แล้วเปิดไฟล์ชื่อเดียวกันทางซ้าย</li>
 <li>กดคลิกในกล่องโค้ด → <b>Ctrl+A</b> (เลือกทั้งหมด) → <b>Ctrl+V</b> (วางทับ) → กดบันทึก 💾</li>
-<li>ทำซ้ำกับอีกไฟล์ให้ครบ</li>
+<li>ทำซ้ำกับอีกไฟล์ให้ครบ <span class="note">(ไฟล์ dbg.gs ไม่ต้องแตะ)</span></li>
 <li>กด <b>ทำให้ใช้งานได้ → จัดการการทำให้ใช้งานได้</b> → ✏️ → เลือก <b>เวอร์ชันใหม่</b> → <b>ทำให้ใช้งานได้</b> (ลิงก์เดิมใช้ต่อได้)</li>
 </ol></div>
 
 <div class="card"><h2>ไฟล์โค้ด</h2><div id="files"><span class="note">กำลังโหลดไฟล์…</span></div></div>
+
+<div class="card" style="border-color:#FCA5A5"><h2 style="color:#B91C1C">ข้อควรระวัง</h2><ul class="n"><li>ข้อมูลในชีทและไฟล์ใน Drive ของท่านไม่ถูกแตะ เพราะเปลี่ยนแค่โค้ด</li><li>ถ้าเคยใส่ ID โฟลเดอร์ไว้ที่บรรทัด <b>ROOT_FOLDER_ID</b> (บรรทัดที่ 8 ของ Code.gs) ให้ใส่กลับให้เหมือนเดิมหลังวาง</li><li>ตอนทำให้ใช้งานได้ ต้องเลือก <b>จัดการ</b> ไม่ใช่ รายการใหม่ ลิงก์เดิมจึงใช้ต่อได้</li></ul></div>
 
 <div class="card"><h2>เวอร์ชันนี้แก้อะไร</h2><ul class="n" id="notes"></ul></div>
 <p class="note" id="msg"></p>
