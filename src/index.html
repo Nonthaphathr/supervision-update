@@ -389,8 +389,11 @@ const rub = t=>((Store.settings||{}).rubrics||DEFAULT_RUBRICS)[t] || DEFAULT_RUB
 /* ประเภทแบบประเมิน: teach = ประเมินการสอน · plan = ประเมินแผน · visit = เยี่ยมชั้นเรียน (ผูกพฤติกรรมหน้าจอกับ “ประเภท” ไม่ใช่ตัวอักษร A/B/C) */
 const RKINDS = {teach:'ประเมินการสอน (สังเกตการสอน)', plan:'ประเมินแผนการจัดการเรียนรู้ (ดึงแผนที่ครูส่ง)', visit:'เยี่ยมชั้นเรียน (สภาพแวดล้อม/พฤติกรรม)'};
 function kindOfRub(r,t){ if(r&&RKINDS[r.kind]) return r.kind; const n=String((r&&r.name)||'');
-  if(n.indexOf('แผน')>=0) return 'plan'; if(n.indexOf('เยี่ยม')>=0) return 'visit'; if(n.indexOf('สอน')>=0||n.indexOf('จัดการเรียนรู้')>=0) return 'teach';
-  return (DEFAULT_RUBRICS[t]||{}).kind||'teach'; }
+  const dk=(DEFAULT_RUBRICS[t]||{}).kind||'teach';
+  if(n.indexOf('เยี่ยม')>=0) return 'visit'; if(n.indexOf('บันทึกหลัง')>=0) return dk;
+  if(n.indexOf('นิเทศติดตาม')>=0||n.indexOf('สังเกต')>=0||n.indexOf('สอน')>=0||n.indexOf('กิจกรรมการเรียนรู้')>=0) return n.indexOf('แผน')>=0&&n.indexOf('นิเทศติดตาม')<0&&n.indexOf('สังเกต')<0&&n.indexOf('สอน')<0?'plan':'teach';
+  if(n.indexOf('แผน')>=0) return 'plan';
+  return dk; }
 const rkind = t=>kindOfRub(rub(t),t);
 function navDesc(t){ const k=rkind(t), n=itemsOf(t).length; return k==='plan'?'ตรวจแผนที่ครูส่ง เลือกแผนที่รอประเมินแล้วให้คะแนน '+n+' ข้อ':k==='visit'?'สภาพแวดล้อม พฤติกรรมครู และผู้เรียน '+n+' ข้อ':'ประเมินการจัดการเรียนรู้ในชั้นเรียนจริง '+n+' ข้อ'; }
 const rshort = t=>String(rub(t).name||'').replace(new RegExp('^\\s*แบบ\\s*'+t+'\\s*[:：.\\-–]?\\s*'),'').trim()||('แบบ '+t);
