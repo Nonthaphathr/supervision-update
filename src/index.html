@@ -343,7 +343,7 @@ const SW = {
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
 const APP_VERSION = '1.2';
 const APP_CHANGELOG = [
-  {v:'1.2', d:'8 พ.ย. 2569', n:['ศน. ติ๊กเลือกได้เองว่าแบบประเมินแต่ละแบบจะให้แนบรูปภาพ (1–4 รูป) แนบไฟล์ PDF (1–3 ไฟล์) เลือกแผนที่ครูส่งมาประเมิน หรือแสดงวิทยฐานะครู','รายงานผลประเมินแสดงรูปและไฟล์แนบตามที่ตั้งไว้']},
+  {v:'1.2', d:'8 พ.ย. 2569', n:['ศน. ติ๊กเลือกได้เองว่าแบบประเมินแต่ละแบบจะให้แนบรูปภาพ (1–4 รูป) แนบไฟล์ PDF (1–3 ไฟล์) เลือกแผนที่ครูส่งมาประเมิน หรือแสดงวิทยฐานะครู','รายงานผลประเมิน (PDF) ส่งออก .xlsx/CSV และหน้าประวัติ แสดงรูป ไฟล์แนบ วิทยฐานะ และแผนที่ประเมินตามที่บันทึกไว้']},
   {v:'1.1', d:'8 พ.ย. 2569', n:['ศน. กำหนด “ประเภทแบบประเมิน” ของแบบ A/B/C ได้เอง (ประเมินการสอน / ประเมินแผน / เยี่ยมชั้นเรียน) หน้าจอทำงานตามประเภทที่ตั้ง ไม่ผูกกับตัวอักษร A/B/C','เพิ่มเลขเวอร์ชันและประวัติอัปเดตใต้การ์ดหน้าแรก']},
   {v:'1.0', d:'6 พ.ย. 2569', n:['เวอร์ชันแรกของศูนย์อัปเดต: ระบบนิเทศและประเมินการสอน']}
 ];
@@ -755,7 +755,7 @@ function reportHtml(e,opt){ opt=opt||{};
   ${opt.full?'<div style="text-align:center;font-weight:bold;color:#9A3412;font-size:15px">เอกสารผลการประเมิน</div>':''}<h1>${esc(R.name)}</h1><div style="text-align:center">${esc(si.name||'')} สังกัด${esc(si.affiliation||'')}</div>
   <table class="info"><tr><td>ชื่อครู: <b>${esc(uname(e.teacher_id))}</b></td><td>กลุ่มสาระฯ: ${esc(e.group||'-')}</td></tr>
   <tr><td>รายวิชา: ${esc(e.subject||'-')} ชั้น ${esc(e.grade_level||'-')}</td><td>ภาคเรียนที่ ${esc(e.term)} ปีการศึกษา ${esc(e.year)}</td></tr>
-  <tr><td>วันที่นิเทศ: ${thDate(e.date)}</td><td>ผู้นิเทศ: ${evs.map(uname).map(esc).join(', ')}</td></tr></table>
+  <tr><td>วันที่นิเทศ: ${thDate(e.date)}</td><td>ผู้นิเทศ: ${evs.map(uname).map(esc).join(', ')}</td></tr>${(()=>{ const rk=(e.extra&&e.extra.grade_rank)||'', pl=e.plan_id&&(Store.data.LessonPlans||{})[e.plan_id]; return (rk||pl)?`<tr><td>${rk?'วิทยฐานะ: '+esc(rk):''}</td><td>${pl?'แผนที่ประเมิน: '+esc(pl.title||pl.subject||''):''}</td></tr>`:''; })()}</table>
   <table><tr><th style="width:36px">ข้อ</th><th>รายการประเมิน</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr>${rows}</table>
   <div class="sum">คะแนนรวม (ปรับฐาน 100): <b>${(+total).toFixed(2)}</b> คะแนน · ร้อยละ ${(+total).toFixed(2)} · ระดับคุณภาพ <b>${esc(gradeOf(total))}</b></div>
   ${opt.full?`<div class="pbav"><table style="margin-top:8px"><tr><th style="text-align:left">สรุปผลรายด้าน</th><th style="width:90px">ร้อยละ</th><th style="width:110px">ระดับคุณภาพ</th></tr>${catPct(e).map(c=>`<tr><td>${esc(c.name)}</td><td style="text-align:center">${c.pct==null?'-':c.pct.toFixed(2)}</td><td style="text-align:center">${c.pct==null?'-':esc(gradeOf(c.pct))}</td></tr>`).join('')}</table></div>`:''}
@@ -1136,6 +1136,8 @@ async function resultPdf(id){ const e=Store.data.Evaluations[id]; if(!e) return;
 let HF={q:'',year:'',term:'',type:''};
 function planOf(tid,term,year,pid){ const L=Store.data.LessonPlans||{}; if(pid&&L[pid]) return L[pid]; if(!tid) return null;
   return Object.values(L).filter(p=>p.teacher_id===tid&&(!term||String(p.term)===String(term))&&(!year||String(p.year)===String(year))).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''))[0]||null; }
+function attChips(e){ const f=(e.files||[]).filter(Boolean), ph=(e.photos||[]).filter(Boolean);
+  return (ph.length?`<span class="badge" title="รูปที่แนบกับการประเมินนี้">🖼️ ${ph.length} รูป</span>`:'')+f.map((u,i)=>docChip(u,'ไฟล์แนบ '+(i+1),'📎')).join(''); }
 function docChip(url,label,ic,off){ off=off||'ครูยังไม่ส่ง';
   return url?`<button type="button" class="dchip" onclick="viewPdf('${esc(url)}','${esc(label)}')">${ic} ${esc(label)}</button>`:`<span class="dchip off" title="${esc(off)}">${ic} ${esc(label)}<i>${esc(off)}</i></span>`; }
 function teacherDocs(p,big,off){ return `<div class="dchips${big?' big':''}">${docChip(p&&p.pdf_plan_url,big?'ดูแผน':'แผนการสอน','📄',off)}${docChip(p&&p.post_note_url,big?'ดูบันทึกหลังสอน':'บันทึกหลังสอน','📝',off)}</div>`; }
@@ -1148,7 +1150,7 @@ function evalTable(E,actions){
   return `<div class="tw"><table><thead><tr><th>วันที่</th><th>แบบ</th><th>ครู</th><th>วิชา</th><th>ภาค/ปี</th><th>ผู้นิเทศ</th><th>คะแนน</th><th>ระดับ</th>${actions?'<th>เอกสารครู</th><th>รายงาน</th><th></th>':''}</tr></thead><tbody>
    ${E.map(e=>`<tr><td>${thDate(e.date)}</td><td><span class="badge ${e.type==='A'?'':e.type==='B'?'y':'s'}">${e.type}</span></td><td>${esc(uname(e.teacher_id))}</td><td>${esc(e.subject||'-')}</td><td>${esc(e.term)}/${esc(e.year)}</td>
      <td style="font-size:12px">${(e.evaluators||[]).map(uname).map(esc).join('<br>')}</td><td><b>${(+e.total_normalized).toFixed(2)}</b></td><td>${gradeBadge(e.grade)}</td>
-     ${actions?`<td>${teacherDocs(planOf(e.teacher_id,e.term,e.year,e.plan_id))}</td>
+     ${actions?`<td>${teacherDocs(planOf(e.teacher_id,e.term,e.year,e.plan_id))}${attChips(e)}</td>
      <td><div class="row nw">${!staff?(evalDone(e)?`<button class="btn sm pri" onclick="resultPdf('${e.eval_id}')" title="ดาวน์โหลดเอกสารผลการประเมิน PDF รวมแบบ A/B/C ของภาคเรียนนี้">📄 เอกสารผลการประเมิน</button>`:`<span class="dchip off" title="การประเมินยังไม่เสร็จสิ้น">📄 เอกสารผลการประเมิน<i>ยังไม่เสร็จสิ้น</i></span>`):''}${e.pdf_drive_link?`<button class="btn sm" onclick="viewPdf('${esc(e.pdf_drive_link)}','รายงาน PDF')">📄 PDF</button>`:staff?`<button class="btn sm" onclick="makePdf('${e.eval_id}')">สร้าง PDF</button>`:''}${(e.photos||[]).map((p,i)=>`<a class="btn sm" href="${esc(p)}" target="_blank" title="รูป ${i+1}">🖼️</a>`).join('')}</div></td>
      <td><div class="row nw"><button class="btn sm" title="พิมพ์" onclick="printEval(Store.data.Evaluations['${e.eval_id}'])">🖨️</button>${staff?`<button class="btn sm del" title="ลบ" onclick="delEval('${e.eval_id}')">🗑</button>`:''}</div></td>`:''}</tr>`).join('')}</tbody></table></div>`;
 }
@@ -1633,7 +1635,7 @@ AFTER.reports=()=>initReveal();
 async function openDrive(){ if(MODE!=='gas') return toast('โหมดทดลอง'); const r=await busy(()=>gasCall('apiRootFolderUrl',Store.token)); window.open(r.url,'_blank'); }
 function exportCsv(k){
   if(k==='users') return csv('ผู้ใช้งาน',[['username','ชื่อ','บทบาท','กลุ่มสาระ','โรงเรียน','สถานะ'],...users().map(u=>[u.username,u.name,u.role,u.group,u.school,u.status])]);
-  if(k==='evals'){ const E=Object.values(Store.data.Evaluations); return csv('ผลการประเมิน',[['eval_id','แบบ','ครู','กลุ่มสาระ','วิชา','ชั้น','ภาค','ปี','วันที่','โรงเรียน','ผู้นิเทศ','คะแนน/100','ระดับ','ข้อเสนอแนะ','PDF'],...E.map(e=>[e.eval_id,e.type,uname(e.teacher_id),e.group,e.subject,e.grade_level,e.term,e.year,e.date,e.school,(e.evaluators||[]).map(uname).join('; '),e.total_normalized,e.grade,e.comment,e.pdf_drive_link])]); }
+  if(k==='evals'){ const E=Object.values(Store.data.Evaluations); return csv('ผลการประเมิน',[['eval_id','แบบ','ครู','กลุ่มสาระ','วิชา','ชั้น','ภาค','ปี','วันที่','โรงเรียน','ผู้นิเทศ','คะแนน/100','ระดับ','ข้อเสนอแนะ','PDF','วิทยฐานะ(ที่บันทึกในแบบ)','จำนวนรูปแนบ','ลิงก์รูปแนบ','ลิงก์ไฟล์แนบ PDF'],...E.map(e=>[e.eval_id,e.type,uname(e.teacher_id),e.group,e.subject,e.grade_level,e.term,e.year,e.date,e.school,(e.evaluators||[]).map(uname).join('; '),e.total_normalized,e.grade,e.comment,e.pdf_drive_link,(e.extra&&e.extra.grade_rank)||'',(e.photos||[]).length,(e.photos||[]).join(' | '),(e.files||[]).join(' | ')])]); }
   if(k==='plans') return csv('แผนการจัดการเรียนรู้',[['plan_id','ครู','วิชา','เรื่อง','ภาค','ปี','สถานะ','คะแนน','ไฟล์แผน','บันทึกหลังสอน'],...Object.values(Store.data.LessonPlans).map(p=>[p.plan_id,uname(p.teacher_id),p.subject,p.title,p.term,p.year,p.status,p.score,p.pdf_plan_url,p.post_note_url])]);
   if(k==='books') return csv('การจองนิเทศ',[['booking_id','วันที่','คาบ','ครู','สถานะ','หมายเหตุ'],...Object.values(Store.data.Bookings).map(b=>[b.booking_id,b.date,b.period_no,uname(b.teacher_id),b.is_locked?'ล็อก':'จอง',b.note])]);
 }
@@ -1811,13 +1813,13 @@ async function exportAllEvals(){
   if(!E.length) return SW.err('ยังไม่มีผลการประเมิน');
   const X=await busy(()=>xlsxLib()), si=Store.settings.school_info||{}, f2=x=>(x==null||isNaN(x))?'':+(+x).toFixed(2), uo=id=>Store.data.Users[id]||{};
   const codeOf={}; Object.values(Store.data.Schools||{}).forEach(s=>{ codeOf[s.name]=s.code||s.id||''; });
-  const rows=[['รหัสการประเมิน','แบบ','ปีการศึกษา','ภาคเรียน','วันที่ประเมิน','รหัสโรงเรียน','โรงเรียน','username ครู','ชื่อ-สกุลครู','ตำแหน่ง','วิทยฐานะ','กลุ่มสาระฯ','วิชา','ระดับชั้น','username ผู้นิเทศ','ชื่อผู้นิเทศ','คะแนนดิบ','คะแนนเต็ม','คะแนน (เต็ม 100)','ระดับคุณภาพ','ข้อที่ประเมิน','ข้อทั้งหมด','ประเมินครบ','ข้อเสนอแนะ','ลิงก์ PDF','บันทึกเมื่อ','บันทึกโดย']];
+  const rows=[['รหัสการประเมิน','แบบ','ปีการศึกษา','ภาคเรียน','วันที่ประเมิน','รหัสโรงเรียน','โรงเรียน','username ครู','ชื่อ-สกุลครู','ตำแหน่ง','วิทยฐานะ','กลุ่มสาระฯ','วิชา','ระดับชั้น','username ผู้นิเทศ','ชื่อผู้นิเทศ','คะแนนดิบ','คะแนนเต็ม','คะแนน (เต็ม 100)','ระดับคุณภาพ','ข้อที่ประเมิน','ข้อทั้งหมด','ประเมินครบ','ข้อเสนอแนะ','ลิงก์ PDF','บันทึกเมื่อ','บันทึกโดย','จำนวนรูปแนบ','ลิงก์รูปแนบ','ลิงก์ไฟล์แนบ PDF','แผนที่ประเมิน']];
   const items=[['รหัสการประเมิน','แบบ','ปีการศึกษา','ภาคเรียน','โรงเรียน','username ครู','ชื่อ-สกุลครู','ลำดับหมวด','หมวด','ข้อที่','ข้อประเมิน','คะแนน (1-5)']];
   E.forEach(e=>{ const R=rubE(e), sc=e.scores_json||e.scores||{}, u=uo(e.teacher_id), sch=schOf(e); let tot=0, done=0, cnt=0;
     R.cats.forEach((c,ci)=>c.items.forEach((x,ii)=>{ cnt++; const s=+sc[ci+'_'+ii]||0; if(s>0){ done++; tot+=s; }
       items.push([e.eval_id,e.type,e.year||'',e.term||'',sch,e.teacher_id,u.name||e.teacher_id,ci+1,c.name,ii+1,x,s>0?s:'']); }));
-    rows.push([e.eval_id,e.type,e.year||'',e.term||'',e.date?String(e.date).slice(0,10):'',codeOf[sch]||'',sch,e.teacher_id,u.name||e.teacher_id,u.position||'',u.rank||'',e.group||u.group||'',e.subject||'',e.grade_level||'',
-      (e.evaluators||[]).join(', '),(e.evaluators||[]).map(uname).join(', '),tot,cnt*5,f2(e.total_normalized),e.grade||gradeOf(+e.total_normalized||0),done,cnt,done>=cnt?'ครบ':'ไม่ครบ',e.comment||'',e.pdf_drive_link||'',e.created_at||'',e.created_by||'']); });
+    rows.push([e.eval_id,e.type,e.year||'',e.term||'',e.date?String(e.date).slice(0,10):'',codeOf[sch]||'',sch,e.teacher_id,u.name||e.teacher_id,u.position||'',(e.extra&&e.extra.grade_rank)||u.rank||'',e.group||u.group||'',e.subject||'',e.grade_level||'',
+      (e.evaluators||[]).join(', '),(e.evaluators||[]).map(uname).join(', '),tot,cnt*5,f2(e.total_normalized),e.grade||gradeOf(+e.total_normalized||0),done,cnt,done>=cnt?'ครบ':'ไม่ครบ',e.comment||'',e.pdf_drive_link||'',e.created_at||'',e.created_by||'',(e.photos||[]).length,(e.photos||[]).join('\n'),(e.files||[]).join('\n'),(e.plan_id&&(Store.data.LessonPlans||{})[e.plan_id]||{}).title||'']); });
   const av=(L,t)=>{ const a=L.filter(e=>e.type===t).map(e=>+e.total_normalized||0); return a.length?avg(a):null; };
   const wavg=L=>{ const ws=['A','B','C'].filter(t=>av(L,t)!=null), s=ws.reduce((a,t)=>a+AGW[t],0); return s?ws.reduce((a,t)=>a+av(L,t)*AGW[t],0)/s:0; };
   const grp=(keyFn)=>{ const G={}; E.forEach(e=>{ const k=keyFn(e); (G[k]=G[k]||[]).push(e); }); return Object.values(G); };
@@ -1828,7 +1830,7 @@ async function exportAllEvals(){
     return [codeOf[schOf(e)]||'',schOf(e),e.year||'',e.term||'',new Set(L.map(x=>x.teacher_id)).size,L.length,f2(av(L,'A')),f2(av(L,'B')),f2(av(L,'C')),f2(avg(all)),gradeOf(avg(all))]; })
     .sort((a,b)=>String(a[1]).localeCompare(String(b[1]),'th')||String(a[2]).localeCompare(String(b[2]))||String(a[3]).localeCompare(String(b[3])));
   const wb=X.utils.book_new(), add=(r,name,w)=>{ const ws=X.utils.aoa_to_sheet(r); ws['!cols']=w.map(x=>({wch:x})); X.utils.book_append_sheet(wb,ws,name); };
-  add(rows,'รายการประเมิน',[16,6,10,9,12,11,30,14,28,22,16,16,22,10,18,28,9,9,10,12,9,9,9,40,30,22,16]);
+  add(rows,'รายการประเมิน',[16,6,10,9,12,11,30,14,28,22,16,16,22,10,18,28,9,9,10,12,9,9,9,40,30,22,16,9,40,40,30]);
   add(items,'คะแนนรายข้อ',[16,6,10,9,30,14,28,9,34,7,60,10]);
   add([['username ครู','ชื่อ-สกุล','โรงเรียน','ปีการศึกษา','ภาคเรียน','จำนวนครั้ง','เฉลี่ย A','เฉลี่ย B','เฉลี่ย C','เฉลี่ยถ่วงน้ำหนัก','ระดับคุณภาพ'],...tr.map(x=>x.row)],'สรุปรายครู',[16,28,30,10,9,9,9,9,9,14,12]);
   add([['รหัสโรงเรียน','โรงเรียน','ปีการศึกษา','ภาคเรียน','จำนวนครู','จำนวนครั้ง','เฉลี่ย A','เฉลี่ย B','เฉลี่ย C','เฉลี่ยรวม','ระดับคุณภาพ'],...sr],'สรุปรายโรงเรียน',[12,30,10,9,10,10,9,9,9,10,12]);
