@@ -368,24 +368,31 @@ function canSeePlan(p){ return canSeeEval(p); }
 
 /* ================= Rubrics (ค่าเริ่มต้น) ================= */
 const DEFAULT_RUBRICS = {
-  A:{ name:'แบบ A ประเมินการสอนจริง', cats:[
+  A:{ kind:'teach', name:'แบบ A ประเมินการสอนจริง', cats:[
     {name:'1. การเตรียมการสอน', items:['มีแผนการจัดการเรียนรู้สอดคล้องกับตัวชี้วัด','เตรียมสื่อ อุปกรณ์ และแหล่งเรียนรู้พร้อมใช้','แจ้งจุดประสงค์การเรียนรู้ให้ผู้เรียนทราบ']},
     {name:'2. การจัดกิจกรรมการเรียนรู้', items:['นำเข้าสู่บทเรียนน่าสนใจ เชื่อมโยงความรู้เดิม','จัดกิจกรรมเน้นผู้เรียนเป็นสำคัญ (Active Learning)','ใช้คำถามกระตุ้นการคิดขั้นสูง','ส่งเสริมการทำงานร่วมกันเป็นกลุ่ม','ใช้เวลาเหมาะสมกับกิจกรรม','สรุปบทเรียนร่วมกับผู้เรียน']},
     {name:'3. สื่อและเทคโนโลยี', items:['ใช้สื่อเหมาะสมกับเนื้อหาและวัย','บูรณาการเทคโนโลยีดิจิทัลอย่างสร้างสรรค์','ผู้เรียนได้ลงมือใช้สื่อ/แหล่งเรียนรู้']},
     {name:'4. การวัดและประเมินผล', items:['วัดผลด้วยวิธีการหลากหลาย','ประเมินตามสภาพจริงและให้ข้อมูลย้อนกลับ','เครื่องมือวัดผลสอดคล้องกับจุดประสงค์']},
     {name:'5. การบริหารจัดการชั้นเรียน', items:['สร้างบรรยากาศเชิงบวกและปลอดภัย','ดูแลผู้เรียนรายบุคคลอย่างทั่วถึง']} ]},
-  B:{ name:'แบบ B ประเมินแผนการจัดการเรียนรู้', cats:[
+  B:{ kind:'plan', name:'แบบ B ประเมินแผนการจัดการเรียนรู้', cats:[
     {name:'1. องค์ประกอบของแผน', items:['ระบุมาตรฐาน/ตัวชี้วัดครบถ้วน','สาระสำคัญชัดเจนถูกต้อง','จุดประสงค์ครอบคลุม K-P-A','สาระการเรียนรู้สอดคล้องกับตัวชี้วัด']},
     {name:'2. กิจกรรม Active Learning', items:['กิจกรรมให้ผู้เรียนลงมือปฏิบัติจริง','มีขั้นตอนการคิดวิเคราะห์/แก้ปัญหา','มีการเรียนรู้ร่วมกัน (Cooperative)','เปิดโอกาสให้นำเสนอและสะท้อนคิด','เชื่อมโยงกับชีวิตจริง/ท้องถิ่น','สอดแทรกสมรรถนะสำคัญของผู้เรียน']},
     {name:'3. สื่อและแหล่งเรียนรู้', items:['ระบุสื่อเหมาะสมหลากหลาย','มีการใช้เทคโนโลยีสนับสนุนการเรียนรู้']},
     {name:'4. การวัดและประเมินผล', items:['ระบุวิธีการ เครื่องมือ เกณฑ์ชัดเจน','การประเมินสอดคล้องกับจุดประสงค์','มีรูบริกหรือเกณฑ์คุณภาพ']},
     {name:'5. บันทึกหลังสอน', items:['บันทึกผลการจัดการเรียนรู้ ปัญหา และแนวทางแก้ไข','นำผลไปพัฒนาการสอนครั้งต่อไป']} ]},
-  C:{ name:'แบบ C ประเมินการเยี่ยมชั้นเรียน', cats:[
+  C:{ kind:'visit', name:'แบบ C ประเมินการเยี่ยมชั้นเรียน', cats:[
     {name:'1. สภาพแวดล้อมในห้องเรียน', items:['ห้องเรียนสะอาด เป็นระเบียบ','แสงสว่างและการระบายอากาศเหมาะสม','จัดโต๊ะเก้าอี้เอื้อต่อกิจกรรม','มีป้ายนิเทศ/มุมความรู้ที่เป็นปัจจุบัน','จัดแสดงผลงานผู้เรียน','มีข้อตกลงร่วมของห้องเรียน','สื่อ อุปกรณ์จัดเก็บเป็นระบบ','มีความปลอดภัยในห้องเรียน']},
     {name:'2. พฤติกรรมครู', items:['แต่งกายสุภาพเหมาะสม','เข้าสอนตรงเวลา','ใช้ภาษาถูกต้อง ชัดเจน','มีบุคลิกภาพเป็นแบบอย่าง','ให้ความเป็นกันเองกับผู้เรียน','ควบคุมชั้นเรียนได้ดี','อธิบายเนื้อหาเข้าใจง่าย','ใช้คำถามกระตุ้นการคิด','ให้กำลังใจและเสริมแรงทางบวก','ดูแลผู้เรียนทั่วถึง','ใช้สื่อเทคโนโลยีได้คล่อง','จัดกิจกรรมหลากหลาย','เชื่อมโยงบทเรียนกับชีวิตจริง','ตรวจสอบความเข้าใจระหว่างเรียน','ให้ข้อมูลย้อนกลับทันที','บริหารเวลาเหมาะสม','สอดแทรกคุณธรรมจริยธรรม','สรุปบทเรียนชัดเจน']},
     {name:'3. พฤติกรรมผู้เรียน (3.1–3.10)', items:['3.1 ผู้เรียนตั้งใจเรียน','3.2 มีส่วนร่วมในกิจกรรม','3.3 กล้าซักถาม แสดงความคิดเห็น','3.4 ทำงานร่วมกับผู้อื่นได้','3.5 รับผิดชอบงานที่ได้รับมอบหมาย','3.6 มีระเบียบวินัย','3.7 ใช้สื่อ/อุปกรณ์อย่างถูกวิธี','3.8 นำเสนอผลงานได้','3.9 มีความสุขในการเรียน','3.10 บรรลุจุดประสงค์การเรียนรู้']} ]}
 };
 const rub = t=>((Store.settings||{}).rubrics||DEFAULT_RUBRICS)[t] || DEFAULT_RUBRICS[t];
+/* ประเภทแบบประเมิน: teach = ประเมินการสอน · plan = ประเมินแผน · visit = เยี่ยมชั้นเรียน (ผูกพฤติกรรมหน้าจอกับ “ประเภท” ไม่ใช่ตัวอักษร A/B/C) */
+const RKINDS = {teach:'ประเมินการสอน (สังเกตการสอน)', plan:'ประเมินแผนการจัดการเรียนรู้ (ดึงแผนที่ครูส่ง)', visit:'เยี่ยมชั้นเรียน (สภาพแวดล้อม/พฤติกรรม)'};
+function kindOfRub(r,t){ if(r&&RKINDS[r.kind]) return r.kind; const n=String((r&&r.name)||'');
+  if(n.indexOf('แผน')>=0) return 'plan'; if(n.indexOf('เยี่ยม')>=0) return 'visit'; if(n.indexOf('สอน')>=0||n.indexOf('จัดการเรียนรู้')>=0) return 'teach';
+  return (DEFAULT_RUBRICS[t]||{}).kind||'teach'; }
+const rkind = t=>kindOfRub(rub(t),t);
+function navDesc(t){ const k=rkind(t), n=itemsOf(t).length; return k==='plan'?'ตรวจแผนที่ครูส่ง เลือกแผนที่รอประเมินแล้วให้คะแนน '+n+' ข้อ':k==='visit'?'สภาพแวดล้อม พฤติกรรมครู และผู้เรียน '+n+' ข้อ':'ประเมินการจัดการเรียนรู้ในชั้นเรียนจริง '+n+' ข้อ'; }
 const rshort = t=>String(rub(t).name||'').replace(new RegExp('^\\s*แบบ\\s*'+t+'\\s*[:：.\\-–]?\\s*'),'').trim()||('แบบ '+t);
 const rlabel = t=>'แบบ '+t+' · '+rshort(t);
 const rubE = e=>(e&&e.rubric&&Array.isArray(e.rubric.cats))?e.rubric:rub(e&&e.type);
@@ -429,9 +436,9 @@ const PORTAL_SVG = {"teacher": "<svg class=\"role-svg\" viewBox=\"0 0 48 48\" fi
 const ROLE_PORTAL = {Teacher:'teacher', User:'teacher', Supervisor:'supervisor', SchoolAdmin:'admin', Admin:'admin'};
 const NAV = [
   {g:'แบบประเมินและนิเทศ'},
-  {id:'evalA', get t(){ return rshort('A')+' (แบบ A)'; }, get nt(){ return rlabel('A'); }, d:'ประเมินการจัดการเรียนรู้ในชั้นเรียนจริง 17 ข้อ', ic:'a', roles:['Supervisor'], p:['supervisor']},
-  {id:'evalB', get t(){ return rshort('B')+' (แบบ B)'; }, get nt(){ return rlabel('B'); }, d:'ตรวจแผนที่ครูส่ง เน้นเกณฑ์ Active Learning', ic:'b', roles:['Supervisor'], p:['supervisor']},
-  {id:'evalC', get t(){ return rshort('C')+' (แบบ C)'; }, get nt(){ return rlabel('C'); }, d:'สภาพแวดล้อม พฤติกรรมครู และผู้เรียน 36 ข้อ', ic:'c', roles:['Supervisor'], p:['supervisor']},
+  {id:'evalA', get t(){ return rshort('A')+' (แบบ A)'; }, get nt(){ return rlabel('A'); }, get d(){ return navDesc('A'); }, ic:'a', roles:['Supervisor'], p:['supervisor']},
+  {id:'evalB', get t(){ return rshort('B')+' (แบบ B)'; }, get nt(){ return rlabel('B'); }, get d(){ return navDesc('B'); }, ic:'b', roles:['Supervisor'], p:['supervisor']},
+  {id:'evalC', get t(){ return rshort('C')+' (แบบ C)'; }, get nt(){ return rlabel('C'); }, get d(){ return navDesc('C'); }, ic:'c', roles:['Supervisor'], p:['supervisor']},
   {id:'rubricset', t:'ตั้งค่าข้อกระทงการนิเทศ', nt:'ข้อกระทงการนิเทศ', d:'แก้ไข ส่งออก และนำเข้าข้อกระทงของแบบนิเทศ A/B/C (ไฟล์ JSON)', ic:'set', roles:['Supervisor'], p:['supervisor']},
   {g:'งานของครู'},
   {id:'submitPlan', t:'ส่งแผนการจัดการเรียนรู้', d:'อัปโหลดแผนและบันทึกหลังสอนเพื่อรับการประเมิน', ic:'up', roles:['Teacher'], p:['teacher']},
@@ -680,7 +687,7 @@ function collectEval(){
   return Object.assign(EV,{ teacher_id:val('f_teacher'), group:val('f_group'), subject:val('f_subject'), grade_level:val('f_level'),
     term:val('f_term'), year:val('f_year'), date:val('f_date'), school:val('f_school'), evaluator1:val('f_ev1'), evaluator2:val('f_ev2'),
     comment:val('f_comment'), photo1:FORM.photo1||'', photo2:FORM.photo2||'',
-    extra: EV.type==='B'?{grade_rank:val('b_rank')}:EV.extra });
+    extra: rkind(EV.type)==='plan'?{grade_rank:val('b_rank')}:EV.extra });
 }
 function resetEval(){ newEval(EV.type); render(); }
 async function saveEval(){
@@ -690,9 +697,9 @@ async function saveEval(){
   const total=normalize(e.type,e.scores), id=e.eval_id||uid('EV');
   const rec={ eval_id:id, type:e.type, teacher_id:e.teacher_id, group:e.group, subject:e.subject, grade_level:e.grade_level, term:e.term, year:e.year,
     date:e.date, school:e.school, evaluators:[e.evaluator1,e.evaluator2].filter(Boolean), scores_json:e.scores, total_normalized:total, grade:gradeOf(total),
-    photos:[e.photo1,e.photo2].filter(Boolean), comment:e.comment, plan_id:e.plan_id||'', extra:e.extra||{}, pdf_drive_link:'', rubric:JSON.parse(JSON.stringify(rub(e.type))), created_at:new Date().toISOString(), created_by:Store.user.username };
+    photos:[e.photo1,e.photo2].filter(Boolean), comment:e.comment, plan_id:(rkind(e.type)==='plan'?e.plan_id:'')||'', extra:e.extra||{}, pdf_drive_link:'', rubric:{...JSON.parse(JSON.stringify(rub(e.type))),kind:rkind(e.type)}, created_at:new Date().toISOString(), created_by:Store.user.username };
   const ops=[{c:'Evaluations',op:'set',id,data:rec}];
-  if(e.plan_id) ops.push({c:'LessonPlans',op:'merge',id:e.plan_id,data:{status:'ประเมินแล้ว',eval_id:id,score:total}});
+  if(e.plan_id && rkind(e.type)==='plan') ops.push({c:'LessonPlans',op:'merge',id:e.plan_id,data:{status:'ประเมินแล้ว',eval_id:id,score:total}});
   await busy(()=>commit(ops));
   const mk = MODE==='gas' && await SW.confirm('บันทึกสำเร็จ','สร้างรายงาน PDF เก็บใน Drive พร้อมลายเซ็นเลยหรือไม่?');
   if(mk) await makePdf(id); else SW.ok('บันทึกผลการประเมินแล้ว');
@@ -800,11 +807,9 @@ async function makePdf(id){
 const VIEWS = {}, AFTER = {};
 DZMETA = k=>({section:'รูปนิเทศ', year:val('f_year')||(EV&&EV.year)||Store.settings.academic_year, sub:EV?evalPath({...EV,term:val('f_term')||EV.term,teacher_id:val('f_teacher')})+'/'+clean(uname(val('f_teacher'))):'', prefix:(EV?EV.type:'')+'_'+ymd(new Date())+'_'});
 
-VIEWS.evalA = ()=>{ if(!EV||EV.type!=='A') newEval('A');
-  return progressBar()+evalGeneral()+photoCard('ภาพการนิเทศ (2 รูป)')+`<div class="card glass reveal"><h3>${esc(rub('A').name)}</h3><div class="muted" style="margin-bottom:6px">5 = ดีมาก · 4 = ดี · 3 = ปานกลาง · 2 = พอใช้ · 1 = ปรับปรุง</div>${questions('A')}</div>`+summaryCard(); };
-AFTER.evalA = ()=>{ bindDrops(DZMETA); updateSummary(); initReveal(); };
-
-VIEWS.evalB = ()=>{ if(!EV||EV.type!=='B') newEval('B');
+function evalTeachView(T){
+  return progressBar()+evalGeneral()+photoCard('ภาพการนิเทศ (2 รูป)')+`<div class="card glass reveal"><h3>${esc(rub(T).name)}</h3><div class="muted" style="margin-bottom:6px">5 = ดีมาก · 4 = ดี · 3 = ปานกลาง · 2 = พอใช้ · 1 = ปรับปรุง</div>${questions(T)}</div>`+summaryCard(); }
+function evalPlanView(T){
   const plans=Object.values(Store.data.LessonPlans).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
   const wait=plans.filter(p=>p.status!=='ประเมินแล้ว');
   return `<div class="card glass reveal"><h3>แผนที่รอประเมิน <span class="badge">${wait.length}</span></h3><div class="tw"><table>
@@ -814,17 +819,23 @@ VIEWS.evalB = ()=>{ if(!EV||EV.type!=='B') newEval('B');
      <td class="row"><button class="btn sm" onclick="viewPdf('${esc(p.pdf_plan_url)}','แผนการจัดการเรียนรู้')">📄 แผน</button><button class="btn sm" onclick="viewPdf('${esc(p.post_note_url)}','บันทึกหลังสอน')">📝 หลังสอน</button></td>
      <td><button class="btn sm pri" onclick="pullPlan('${p.plan_id}')">ดึงเข้าฟอร์ม →</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">ไม่มีแผนรอประเมิน</td></tr>'}
    </tbody></table></div></div>`+progressBar()+evalGeneral()+
-   `<div class="card glass reveal"><h3>${esc(rub('B').name)}</h3>${EV.plan_id?`<div class="badge y" style="margin-bottom:10px">ประเมินแผน: ${esc((Store.data.LessonPlans[EV.plan_id]||{}).title||'')}</div>`:''}
+   `<div class="card glass reveal"><h3>${esc(rub(T).name)}</h3>${EV.plan_id?`<div class="badge y" style="margin-bottom:10px">ประเมินแผน: ${esc((Store.data.LessonPlans[EV.plan_id]||{}).title||'')}</div>`:''}
     <div id="bdocs" style="margin-bottom:12px">${EV.teacher_id?teacherDocs(planOf(EV.teacher_id,EV.term,EV.year,EV.plan_id),true):teacherDocs(null,true,'เลือกครูก่อน')}</div>
-    <label class="f" style="max-width:340px;margin-bottom:10px"><span class="lh">วิทยฐานะของครู <span class="muted">(ดึงจากข้อมูลครูอัตโนมัติ)</span></span><select id="b_rank">${opt(rankOpts((EV.extra||{}).grade_rank||(Store.data.Users[EV.teacher_id]||{}).rank||''),(EV.extra||{}).grade_rank||(Store.data.Users[EV.teacher_id]||{}).rank||'')}</select></label>${questions('B')}</div>`+summaryCard(); };
-AFTER.evalB = ()=>{ updateSummary(); initReveal(); refreshBDocs(); const ft=$('#f_term'), fy=$('#f_year'); if(ft) ft.addEventListener('change',refreshBDocs); if(fy) fy.addEventListener('change',refreshBDocs); };
+    <label class="f" style="max-width:340px;margin-bottom:10px"><span class="lh">วิทยฐานะของครู <span class="muted">(ดึงจากข้อมูลครูอัตโนมัติ)</span></span><select id="b_rank">${opt(rankOpts((EV.extra||{}).grade_rank||(Store.data.Users[EV.teacher_id]||{}).rank||''),(EV.extra||{}).grade_rank||(Store.data.Users[EV.teacher_id]||{}).rank||'')}</select></label>${questions(T)}</div>`+summaryCard(); }
+function evalVisitView(T){
+  return progressBar()+evalGeneral()+photoCard('ภาพบรรยากาศห้องเรียน (2 รูป)')+`<div class="card glass reveal"><h3>${esc(rub(T).name)}</h3><div class="muted">คลิกหัวข้อเพื่อเปิด/ปิดหมวด</div>${questions(T,true)}</div>`+summaryCard(); }
+/* หน้าประเมินเลือกตามประเภทแบบ (kind) ที่ ศน. ตั้งไว้ — ไม่ผูกกับตัวอักษร A/B/C */
+function evalView(T){ if(!EV||EV.type!==T) newEval(T); const k=rkind(T); return k==='plan'?evalPlanView(T):k==='visit'?evalVisitView(T):evalTeachView(T); }
+function evalAfter(T){ if(rkind(T)==='plan'){ updateSummary(); initReveal(); refreshBDocs(); const ft=$('#f_term'), fy=$('#f_year'); if(ft) ft.addEventListener('change',refreshBDocs); if(fy) fy.addEventListener('change',refreshBDocs); }
+  else { bindDrops(DZMETA); updateSummary(); initReveal(); } }
 function pullPlan(id){ const p=Store.data.LessonPlans[id]; const t=Store.data.Users[p.teacher_id]||{};
-  newEval('B',{plan_id:id,teacher_id:p.teacher_id,subject:p.subject,group:p.group||t.group||'',grade_level:p.grade_level||'',term:p.term,year:p.year,school:t.school||schools()[0]||'',extra:{grade_rank:p.rank||''}});
+  newEval((EV&&EV.type)||'B',{plan_id:id,teacher_id:p.teacher_id,subject:p.subject,group:p.group||t.group||'',grade_level:p.grade_level||'',term:p.term,year:p.year,school:t.school||schools()[0]||'',extra:{grade_rank:p.rank||''}});
   render(); setTimeout(()=>$('.sticky-prog').scrollIntoView({behavior:'smooth'}),100); toast('ดึงข้อมูลแผนเข้าฟอร์มแล้ว'); }
 
 VIEWS.evalC = ()=>{ if(!EV||EV.type!=='C') newEval('C');
   return progressBar()+evalGeneral()+photoCard('ภาพบรรยากาศห้องเรียน (2 รูป)')+`<div class="card glass reveal"><h3>${esc(rub('C').name)}</h3><div class="muted">คลิกหัวข้อเพื่อเปิด/ปิดหมวด</div>${questions('C',true)}</div>`+summaryCard(); };
-AFTER.evalC = AFTER.evalA;
+
+['A','B','C'].forEach(T=>{ VIEWS['eval'+T]=()=>evalView(T); AFTER['eval'+T]=()=>evalAfter(T); });
 
 /* ---------- ส่งแผน ---------- */
 let PLAN_EDIT=null;
@@ -1615,6 +1626,7 @@ VIEWS.settings = ()=>{
       <span class="badge y">${n} ข้อ · เต็ม ${n*5} → normalize 100</span></div>
      <div class="muted" style="margin:-4px 0 12px;font-size:13px">ผลประเมินที่บันทึกไว้แล้วจะเก็บชุดหัวข้อของตัวเอง การแก้ไขที่นี่มีผลกับการประเมินครั้งถัดไปเท่านั้น</div>
      <label class="f">ชื่อแบบประเมิน<input value="${esc(R.name)}" onchange="RB.${RBT}.name=this.value"></label>
+     <label class="f">ประเภทแบบประเมิน <span class="muted">(กำหนดหน้าจอที่ใช้: ประเมินแผนจะมีตารางแผนที่ครูส่ง)</span><select onchange="RB.${RBT}.kind=this.value;render()">${Object.keys(RKINDS).map(k=>`<option value="${k}" ${kindOfRub(R,RBT)===k?'selected':''}>${RKINDS[k]}</option>`).join('')}</select></label>
      ${R.cats.map((c,ci)=>`<div class="acc-h" style="cursor:default"><input value="${esc(c.name)}" onchange="RB.${RBT}.cats[${ci}].name=this.value" style="font-weight:600"><button class="btn sm del" onclick="RB.${RBT}.cats.splice(${ci},1);render()">ลบหมวด</button></div>
        ${c.items.map((x,ii)=>`<div class="row" style="margin:4px 0 4px 20px"><span class="muted" style="width:28px">${ii+1}.</span><input value="${esc(x)}" onchange="RB.${RBT}.cats[${ci}].items[${ii}]=this.value" style="flex:1"><button class="btn sm del" onclick="RB.${RBT}.cats[${ci}].items.splice(${ii},1);render()">✕</button></div>`).join('')}
        <div style="margin-left:48px"><button class="btn sm" onclick="RB.${RBT}.cats[${ci}].items.push('ข้อประเมินใหม่');render()">＋ เพิ่มข้อ</button></div>`).join('')}
@@ -1751,6 +1763,7 @@ async function saveRubrics(){
   const ops=Object.values(Store.data.Evaluations||{}).filter(e=>e&&e.eval_id&&!(e.rubric&&e.rubric.cats)&&cur[e.type])
     .map(e=>({c:'Evaluations',op:'merge',id:e.eval_id,data:{rubric:JSON.parse(JSON.stringify(cur[e.type]))}}));
   for(let i=0;i<ops.length;i+=150){ const part=ops.slice(i,i+150); await busy(()=>commit(part)); }
+  ['A','B','C'].forEach(t=>{ if(RB[t]) RB[t].kind=kindOfRub(RB[t],t); });
   await saveSet({rubrics:RB});
 }
 async function saveSet(d){ await busy(()=>commit([{c:'Settings',op:'merge',id:'main',data:d}])); if(d.rubrics) RB=null; SW.ok('บันทึกการตั้งค่าแล้ว'); shell(); go(allowed(cur)?cur:'settings'); }
@@ -2331,7 +2344,7 @@ function rbValidate(R){ const out={};
   ['A','B','C'].forEach(t=>{ const x=R&&R[t]; if(!x) return; if(!Array.isArray(x.cats)||!x.cats.length) throw new Error('แบบ '+t+': ไม่มีหมวดข้อประเมิน');
     const cats=x.cats.map((c,ci)=>{ const it=(c&&Array.isArray(c.items)?c.items:[]).map(s=>String(s==null?'':s).trim().slice(0,500)).filter(Boolean);
       if(!it.length) throw new Error('แบบ '+t+' หมวดที่ '+(ci+1)+': ไม่มีข้อประเมิน'); return {name:String((c&&c.name)||('หมวด '+(ci+1))).trim().slice(0,200),items:it}; });
-    out[t]={...x,name:String(x.name||('แบบ '+t)).trim().slice(0,200),cats}; });
+    out[t]={...x,kind:kindOfRub(x,t),name:String(x.name||('แบบ '+t)).trim().slice(0,200),cats}; });
   if(!Object.keys(out).length) throw new Error('ไม่พบแบบ A/B/C ในไฟล์'); return out; }
 function rbExport(){ const R=RB||JSON.parse(JSON.stringify(Store.settings.rubrics||DEFAULT_RUBRICS)); cfgDownload('rubrics',{rubrics:rbValidate(R)},'ข้อกระทงการนิเทศ_A-B-C'); }
 async function rbImport(){ const o=await cfgPick('rubrics'); if(!o) return; let R; try{ R=rbValidate(o.data.rubrics||o.data); }catch(e){ return SW.err('นำเข้าไม่ได้',e.message); }
