@@ -554,10 +554,15 @@ function isUnder_(item, targetId, depth){
 function referenced_(id){
   return ['LessonPlans','Evaluations','Users','Settings','Schools'].some(function(c){ return JSON.stringify(readColl_(c)).indexOf(id)>=0; });
 }
+function planFileIds_(old){
+  const ids = PLAN_FILE_KEYS_.map(function(f){ return driveId_(old[f]); });
+  const t = old.tfiles; if (t && typeof t==='object') Object.keys(t).forEach(function(k){ ids.push(driveId_(t[k])); });
+  return ids.filter(function(x){ return x; });
+}
 function trashReplacedPlanFiles_(u, prev, ops){
   try{
     ops.forEach(function(o){ const old = prev[o.id]; if (!old) return;
-      PLAN_FILE_KEYS_.forEach(function(f){ const id = driveId_(old[f]); if (!id || referenced_(id)) return;
+      planFileIds_(old).forEach(function(id){ if (referenced_(id)) return;
         try{
           const file = DriveApp.getFileById(id), d = String(file.getDescription()||'');
           if (d.indexOf('nithet-upload:')===0 && d!=='nithet-upload:'+old.teacher_id && u.role!=='Admin') return;

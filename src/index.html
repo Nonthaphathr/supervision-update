@@ -341,8 +341,9 @@ const SW = {
   confirm:async(t,x)=>window.Swal?(await Swal.fire({icon:'question',title:t,text:x||'',showCancelButton:true,confirmButtonText:'ยืนยัน',cancelButtonText:'ยกเลิก',confirmButtonColor:getCss('--p')})).isConfirmed:confirm(t)
 };
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 const APP_CHANGELOG = [
+  {v:'1.3', d:'8 พ.ย. 2569', n:['แอดมินระบบเพิ่ม ซ่อน หรือแสดงช่องอัปโหลดไฟล์ฝั่งครูได้เอง (ค่าเริ่มต้น 2 ช่อง: แผนฯ และบันทึกหลังสอน) ที่ ตั้งค่า → ช่องอัปโหลดฝั่งครู','ผู้นิเทศเลือกเปิดดูไฟล์อื่นของครูนอกจากแผนฯ ได้ในหน้าประเมิน']},
   {v:'1.2', d:'8 พ.ย. 2569', n:['ศน. ติ๊กเลือกได้เองว่าแบบประเมินแต่ละแบบจะให้แนบรูปภาพ (1–4 รูป) แนบไฟล์ PDF (1–3 ไฟล์) เลือกแผนที่ครูส่งมาประเมิน หรือแสดงวิทยฐานะครู','รายงานผลประเมิน (PDF) ส่งออก .xlsx/CSV และหน้าประวัติ แสดงรูป ไฟล์แนบ วิทยฐานะ และแผนที่ประเมินตามที่บันทึกไว้']},
   {v:'1.1', d:'8 พ.ย. 2569', n:['ศน. กำหนด “ประเภทแบบประเมิน” ของแบบ A/B/C ได้เอง (ประเมินการสอน / ประเมินแผน / เยี่ยมชั้นเรียน) หน้าจอทำงานตามประเภทที่ตั้ง ไม่ผูกกับตัวอักษร A/B/C','เพิ่มเลขเวอร์ชันและประวัติอัปเดตใต้การ์ดหน้าแรก']},
   {v:'1.0', d:'6 พ.ย. 2569', n:['เวอร์ชันแรกของศูนย์อัปเดต: ระบบนิเทศและประเมินการสอน']}
@@ -402,7 +403,7 @@ const RKINDS = {teach:'ประเมินการสอน (สังเก�
    ถ้าไม่ได้ตั้ง ใช้ค่าเริ่มต้นตามประเภทแบบ (ระบบเดิมจึงทำงานเหมือนเดิม) */
 const ROPT_DEF = {teach:{photos:2,files:0,plan:false,rank:false}, visit:{photos:2,files:0,plan:false,rank:false}, plan:{photos:0,files:0,plan:true,rank:true}};
 function roptsOf(r,t){ const d=ROPT_DEF[kindOfRub(r,t)], o=(r&&r.opts)||{}, cl=(v,a,b,x)=>{ v=Math.round(+v); return isFinite(v)?Math.max(a,Math.min(b,v)):x; };
-  return {photos:o.photos!=null?cl(o.photos,0,4,d.photos):d.photos, files:o.files!=null?cl(o.files,0,3,d.files):d.files, plan:o.plan!=null?!!o.plan:d.plan, rank:o.rank!=null?!!o.rank:d.rank}; }
+  return {photos:o.photos!=null?cl(o.photos,0,4,d.photos):d.photos, files:o.files!=null?cl(o.files,0,3,d.files):d.files, plan:o.plan!=null?!!o.plan:d.plan, rank:o.rank!=null?!!o.rank:d.rank, docs:Array.isArray(o.docs)?o.docs.filter(x=>typeof x==='string').slice(0,12):null}; }
 const ropts = t=>roptsOf(rub(t),t);
 function kindOfRub(r,t){ if(r&&RKINDS[r.kind]) return r.kind; const n=String((r&&r.name)||'');
   const dk=(DEFAULT_RUBRICS[t]||{}).kind||'teach';
@@ -583,8 +584,20 @@ async function uploadToDrive(file, onProgress, meta={}){
 }
 /* Dropzone factory: key ใช้เก็บค่าใน form state */
 const IMGACC='image/'+'*';  /* ห้ามเขียนติดกันในสตริง: GAS ตัดเป็นคอมเมนต์ */
+/* ช่องอัปโหลดฝั่งครู (แอดมินระบบเพิ่ม/ซ่อน/แสดงได้ใน ตั้งค่า → ช่องอัปโหลดฝั่งครู): ช่องหลัก 2 ช่องเดิมคือ pdf_plan / post_note ช่องที่เพิ่มเองเก็บใน แผน.tfiles[รหัสช่อง] */
+const TF_TYPES={pdf:{t:'PDF',acc:'application/pdf'},image:{t:'รูปภาพ',acc:IMGACC},doc:{t:'เอกสารทั่วไป (PDF Word Excel PowerPoint)',acc:'.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx'}};
+const TF_CORE=[{id:'pdf_plan',label:'ไฟล์แผนการจัดการเรียนรู้',short:'แผน',small:'แผนการสอน',big:'ดูแผน',ic:'📄',key:'pdf_plan_url'},{id:'post_note',label:'ไฟล์บันทึกหลังสอน',short:'หลังสอน',small:'บันทึกหลังสอน',big:'ดูบันทึกหลังสอน',ic:'📝',key:'post_note_url'}];
+function tfBlocks(){ const s=(Store.settings||{}).teacher_files, L=Array.isArray(s)?s:[];
+  const out=TF_CORE.map(d=>{ const x=L.find(y=>y&&y.id===d.id)||{}; return {id:d.id,label:String(x.label||d.label).trim().slice(0,60)||d.label,type:'pdf',on:x.on!==false,core:true}; });
+  L.forEach(x=>{ if(x&&/^tf[0-9a-z]{2,12}$/.test(String(x.id||''))&&!out.some(o=>o.id===x.id)&&out.length<10) out.push({id:x.id,label:String(x.label||'').trim().slice(0,60)||'ไฟล์เอกสาร',type:TF_TYPES[x.type]?x.type:'pdf',on:x.on!==false,core:false}); });
+  return out; }
+const tfOn=()=>tfBlocks().filter(b=>b.on);
+function tfUrl(p,id){ if(!p) return ''; const c=TF_CORE.find(d=>d.id===id); return c?(p[c.key]||''):((p.tfiles||{})[id]||''); }
+function tfShort(b){ const c=TF_CORE.find(d=>d.id===b.id); return c?c.short:b.label; }
+function tfDocBtns(p,ids){ return tfOn().filter(b=>!ids||ids.indexOf(b.id)>=0).map(b=>{ const c=TF_CORE.find(d=>d.id===b.id), u=tfUrl(p,b.id);
+  return `<button class="btn sm" ${u?'':'disabled'} onclick="viewPdf('${esc(u)}','${esc(b.label)}')">${c?c.ic:'📎'} ${esc(tfShort(b))}</button>`; }).join(''); }
 function dropzone(key, label, accept, value){
-  return `<div class="drop ${value?'done':''}" id="dz_${key}" data-key="${key}" data-accept="${accept}">
+  return `<div class="drop ${value?'done':''}" id="dz_${key}" data-key="${key}" data-accept="${accept}" data-label="${esc(label||'')}">
     ${value? `<span class="dz-ok">✓ อัปโหลดแล้ว</span>`+(accept.includes('image')?`<img src="${esc(driveImageUrl(value))}">`:`<div style="font-size:34px">📄</div><div style="color:#15803D;font-weight:600">ไฟล์ขึ้น Drive เรียบร้อย</div><button class="btn sm" onclick="event.stopPropagation();viewPdf('${esc(value)}')">เปิดดู</button>`)
       +`<button class="btn sm del x" onclick="event.stopPropagation();dzClear('${key}')">✕</button>`
     : `<div style="font-size:30px">${accept.includes('image')?'🖼️':'📎'}</div><b style="font-size:14px">${esc(label)}</b><div class="muted">ลากไฟล์มาวาง หรือคลิกเพื่อเลือก</div>`}
@@ -599,21 +612,21 @@ function bindDrops(meta){
     dz.onclick=pick;
     dz.ondragover=e=>{e.preventDefault();dz.classList.add('over')}; dz.ondragleave=()=>dz.classList.remove('over');
     dz.ondrop=e=>{e.preventDefault();dz.classList.remove('over'); const f=e.dataTransfer.files[0]; f&&handle(f);};
-    async function handle(file){
-      if(accept.includes('pdf') && file.type!=='application/pdf') return SW.err('รองรับเฉพาะไฟล์ PDF');
+    async function handle(file){ const lb=dz.dataset.label||'';
+      if(accept==='application/pdf' && file.type!=='application/pdf') return SW.err('รองรับเฉพาะไฟล์ PDF');
       if(accept.includes('image') && !/^image[/]/.test(file.type)) return SW.err('รองรับเฉพาะไฟล์ภาพ');
       const f = await compressImage(file);
       if(accept.includes('image')){ const pv=URL.createObjectURL(f); dz.innerHTML=`<img src="${pv}"><div class="bar"><div class="prog"><i></i></div></div>`; }
       else dz.innerHTML=`<div style="font-size:30px">⏳</div><div class="muted">${esc(file.name)}</div><div class="bar"><div class="prog"><i></i></div></div>`;
       const bar=dz.querySelector('.prog>i');
       try{ const url=await uploadToDrive(f,p=>bar.style.width=p+'%',typeof meta==='function'?meta(key):meta);
-        discardUpload(FORM[key]); FORM[key]=url; dz.outerHTML=dropzone(key,'',accept,url); bindDrops(meta); toast('อัปโหลดสำเร็จ'); }
-      catch(e){ SW.err('อัปโหลดไม่สำเร็จ',e.message); dz.outerHTML=dropzone(key,'ไฟล์',accept,''); bindDrops(meta); }
+        discardUpload(FORM[key]); FORM[key]=url; dz.outerHTML=dropzone(key,lb,accept,url); bindDrops(meta); toast('อัปโหลดสำเร็จ'); }
+      catch(e){ SW.err('อัปโหลดไม่สำเร็จ',e.message); dz.outerHTML=dropzone(key,lb||'ไฟล์',accept,''); bindDrops(meta); }
     }
   });
 }
 function discardUpload(url){ if(MODE!=='gas'||!url) return; const m=String(url).match(new RegExp('/d/([A-Za-z0-9_-]{20,})')); if(m) gasCall('apiDiscardUpload',Store.token,m[1]).catch(()=>{}); }
-function dzClear(key){ discardUpload(FORM[key]); FORM[key]=''; const dz=$('#dz_'+key); const acc=dz.dataset.accept; dz.outerHTML=dropzone(key,acc.includes('image')?'แนบรูปภาพ':'แนบไฟล์ PDF',acc,''); bindDrops(DZMETA); }
+function dzClear(key){ discardUpload(FORM[key]); FORM[key]=''; const dz=$('#dz_'+key); const acc=dz.dataset.accept; dz.outerHTML=dropzone(key,dz.dataset.label||(acc.includes('image')?'แนบรูปภาพ':'แนบไฟล์ PDF'),acc,''); bindDrops(DZMETA); }
 let DZMETA = {};
 
 /* ================= Helpers ================= */
@@ -832,23 +845,23 @@ const VIEWS = {}, AFTER = {};
 DZMETA = k=>({section:'รูปนิเทศ', year:val('f_year')||(EV&&EV.year)||Store.settings.academic_year, sub:EV?evalPath({...EV,term:val('f_term')||EV.term,teacher_id:val('f_teacher')})+'/'+clean(uname(val('f_teacher'))):'', prefix:(EV?EV.type:'')+'_'+ymd(new Date())+'_'});
 
 /* หน้าประเมินสร้างจาก “ตัวเลือกของแบบประเมิน” (ropts) ที่ ศน. ติ๊กไว้ — ไม่ผูกกับตัวอักษร A/B/C */
-function planWaitCard(){
+function planWaitCard(ids){
   const plans=Object.values(Store.data.LessonPlans).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
   const wait=plans.filter(p=>p.status!=='ประเมินแล้ว');
   return `<div class="card glass reveal"><h3>แผนที่รอประเมิน <span class="badge">${wait.length}</span></h3><div class="tw"><table>
    <thead><tr><th>วันที่ส่ง</th><th>ครู</th><th>วิชา / เรื่อง</th><th>ภาค/ปี</th><th>สถานะ</th><th>เอกสาร</th><th></th></tr></thead><tbody>
    ${wait.length?wait.map(p=>`<tr><td>${thDate(p.created_at)}</td><td>${esc(uname(p.teacher_id))}</td><td><b>${esc(p.subject)}</b><div class="muted">${esc(p.title)}</div></td>
      <td>${esc(p.term)}/${esc(p.year)}</td><td><span class="badge ${p.status==='รอประเมิน'?'':'y'}">${esc(p.status)}</span></td>
-     <td class="row"><button class="btn sm" onclick="viewPdf('${esc(p.pdf_plan_url)}','แผนการจัดการเรียนรู้')">📄 แผน</button><button class="btn sm" onclick="viewPdf('${esc(p.post_note_url)}','บันทึกหลังสอน')">📝 หลังสอน</button></td>
+     <td class="row">${tfDocBtns(p,ids)}</td>
      <td><button class="btn sm pri" onclick="pullPlan('${p.plan_id}')">ดึงเข้าฟอร์ม →</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">ไม่มีแผนรอประเมิน</td></tr>'}
    </tbody></table></div></div>`; }
 function evalView(T){ if(!EV||EV.type!==T) newEval(T); const k=rkind(T), o=ropts(T);
   const pre=o.plan?(EV.plan_id?`<div class="badge y" style="margin-bottom:10px">ประเมินแผน: ${esc((Store.data.LessonPlans[EV.plan_id]||{}).title||'')}</div>`:'')
-    +`<div id="bdocs" style="margin-bottom:12px">${EV.teacher_id?teacherDocs(planOf(EV.teacher_id,EV.term,EV.year,EV.plan_id),true):teacherDocs(null,true,'เลือกครูก่อน')}</div>`:'';
+    +`<div id="bdocs" style="margin-bottom:12px">${EV.teacher_id?teacherDocs(planOf(EV.teacher_id,EV.term,EV.year,EV.plan_id),true,undefined,o.docs):teacherDocs(null,true,'เลือกครูก่อน',o.docs)}</div>`:'';
   const rank=o.rank?`<label class="f" style="max-width:340px;margin-bottom:10px"><span class="lh">วิทยฐานะของครู <span class="muted">(ดึงจากข้อมูลครูอัตโนมัติ)</span></span><select id="b_rank">${opt(rankOpts((EV.extra||{}).grade_rank||(Store.data.Users[EV.teacher_id]||{}).rank||''),(EV.extra||{}).grade_rank||(Store.data.Users[EV.teacher_id]||{}).rank||'')}</select></label>`:'';
   const note=k==='visit'?'<div class="muted">คลิกหัวข้อเพื่อเปิด/ปิดหมวด</div>':k==='teach'?'<div class="muted" style="margin-bottom:6px">5 = ดีมาก · 4 = ดี · 3 = ปานกลาง · 2 = พอใช้ · 1 = ปรับปรุง</div>':'';
   const pt=k==='visit'?'ภาพบรรยากาศห้องเรียน':k==='teach'?'ภาพการนิเทศ':'ภาพประกอบการนิเทศ';
-  return (o.plan?planWaitCard():'')+progressBar()+evalGeneral()+photoCard(pt,o.photos)+fileCard(o.files)
+  return (o.plan?planWaitCard(o.docs):'')+progressBar()+evalGeneral()+photoCard(pt,o.photos)+fileCard(o.files)
     +`<div class="card glass reveal"><h3>${esc(rub(T).name)}</h3>${pre}${rank}${note}${questions(T,k==='visit')}</div>`+summaryCard(); }
 function evalAfter(T){ bindDrops(DZMETA); updateSummary(); initReveal();
   if(ropts(T).plan){ refreshBDocs(); const ft=$('#f_term'), fy=$('#f_year'); if(ft) ft.addEventListener('change',refreshBDocs); if(fy) fy.addEventListener('change',refreshBDocs); } }
@@ -863,7 +876,7 @@ function pullPlan(id){ const p=Store.data.LessonPlans[id]; const t=Store.data.Us
 let PLAN_EDIT=null;
 VIEWS.submitPlan = ()=>{
   const u=Store.user, mine=Object.values(Store.data.LessonPlans).filter(p=>u.role==='Admin'||p.teacher_id===u.username).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
-  const p=PLAN_EDIT||{}; if(!PLAN_EDIT){ FORM.pdf_plan=''; FORM.post_note=''; }
+  const p=PLAN_EDIT||{}; if(!PLAN_EDIT){ tfBlocks().forEach(b=>{ FORM[b.id]=''; }); }
   return `<div class="card glass reveal"><h3>รายละเอียดแผนการจัดการเรียนรู้</h3><div class="grid g3">
     <label class="f">กลุ่มสาระการเรียนรู้<select id="p_group">${opt(SUBJECTS,p.group||u.group)}</select></label>
     <label class="f">รายวิชา<input id="p_subject" value="${esc(p.subject||'')}" placeholder="รหัส ชื่อวิชา"></label>
@@ -872,7 +885,7 @@ VIEWS.submitPlan = ()=>{
     <label class="f">ชื่อแผน / เรื่อง<input id="p_title" value="${esc(p.title||'')}"></label>
     <label class="f">ภาค/ปีการศึกษา<div class="row"><select id="p_term" style="width:90px">${opt(['1','2'],p.term||Store.settings.term)}</select><input id="p_year" value="${esc(p.year||Store.settings.academic_year)}" style="flex:1"></div></label>
    </div></div>
-   <div class="card glass reveal"><h3>อัปโหลดเอกสาร (PDF)</h3>${PLAN_EDIT?'<div class="muted" style="margin:-4px 0 12px">อัปโหลดผิด? กด ✕ ที่ไฟล์เดิมแล้วอัปโหลดใหม่ เมื่อกด “บันทึกการแก้ไข” ไฟล์ใหม่จะแทนที่ไฟล์เดิม (ไฟล์เดิมถูกย้ายลงถังขยะ)</div>':''}<div class="grid g2">${dropzone('pdf_plan','ไฟล์แผนการจัดการเรียนรู้ (PDF)','application/pdf',FORM.pdf_plan)}${dropzone('post_note','ไฟล์บันทึกหลังสอน (PDF)','application/pdf',FORM.post_note)}</div></div>
+   <div class="card glass reveal"><h3>อัปโหลดเอกสาร</h3>${PLAN_EDIT?'<div class="muted" style="margin:-4px 0 12px">อัปโหลดผิด? กด ✕ ที่ไฟล์เดิมแล้วอัปโหลดใหม่ เมื่อกด “บันทึกการแก้ไข” ไฟล์ใหม่จะแทนที่ไฟล์เดิม (ไฟล์เดิมถูกย้ายลงถังขยะ)</div>':''}<div class="grid g2">${tfOn().map(b=>dropzone(b.id,b.label+(b.type==='pdf'?' (PDF)':''),TF_TYPES[b.type].acc,FORM[b.id])).join('')}</div></div>
    <div class="card glass reveal"><h3>บันทึกผลหลังการจัดการเรียนรู้</h3><div class="grid g2">
     <label class="f">วิทยฐานะ<select id="p_rank">${opt(['ครูผู้ช่วย','ครู (ไม่มีวิทยฐานะ)','ครูชำนาญการ','ครูชำนาญการพิเศษ','ครูเชี่ยวชาญ','ครูเชี่ยวชาญพิเศษ'],p.rank)}</select></label><div></div>
     <label class="f">ผลการจัดการเรียนรู้<textarea id="p_result">${esc(p.result||'')}</textarea></label>
@@ -885,16 +898,20 @@ VIEWS.submitPlan = ()=>{
      <td class="row"><button class="btn sm" onclick="viewPdf('${esc(x.pdf_plan_url)}','แผน')">📄</button>${x.status==='รอประเมิน'?`<button class="btn sm" onclick="editPlan('${x.plan_id}')">✏️</button><button class="btn sm del" onclick="delPlan('${x.plan_id}')">🗑</button>`:''}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">ยังไม่มีแผนที่ส่ง</td></tr>'}
    </tbody></table></div></div>`;
 };
-AFTER.submitPlan = ()=>{ bindDrops(k=>({section:'แผนการจัดการเรียนรู้',year:val('p_year')||Store.settings.academic_year,sub:'ภาคเรียนที่ '+(val('p_term')||Store.settings.term)+'/'+clean(Store.user.school||'ไม่ระบุโรงเรียน')+'/'+clean(Store.user.name),prefix:(k==='pdf_plan'?'แผน_':'หลังสอน_')+ymd(new Date())+'_'})); initReveal(); };
-function editPlan(id){ PLAN_EDIT={...Store.data.LessonPlans[id]}; FORM.pdf_plan=PLAN_EDIT.pdf_plan_url; FORM.post_note=PLAN_EDIT.post_note_url; render(); }
+AFTER.submitPlan = ()=>{ bindDrops(k=>({section:'แผนการจัดการเรียนรู้',year:val('p_year')||Store.settings.academic_year,sub:'ภาคเรียนที่ '+(val('p_term')||Store.settings.term)+'/'+clean(Store.user.school||'ไม่ระบุโรงเรียน')+'/'+clean(Store.user.name),prefix:(k==='pdf_plan'?'แผน_':k==='post_note'?'หลังสอน_':clean((tfBlocks().find(b=>b.id===k)||{}).label||'ไฟล์')+'_')+ymd(new Date())+'_'})); initReveal(); };
+function editPlan(id){ PLAN_EDIT={...Store.data.LessonPlans[id]}; tfBlocks().forEach(b=>{ FORM[b.id]=tfUrl(PLAN_EDIT,b.id); }); render(); }
 async function delPlan(id){ if(!(await SW.confirm('ลบแผนนี้?'))) return; await busy(()=>commit([{c:'LessonPlans',op:'delete',id}])); render(); }
 async function savePlan(){
   const id=(PLAN_EDIT&&PLAN_EDIT.plan_id)||uid('LP');
+  const TB=tfBlocks(), bp=TB.find(b=>b.id==='pdf_plan'), bn=TB.find(b=>b.id==='post_note'), tf={...((PLAN_EDIT&&PLAN_EDIT.tfiles)||{})};
+  TB.forEach(b=>{ if(!b.core&&b.on) tf[b.id]=FORM[b.id]||''; });
+  const TFV={ planOn:bp.on, pdf_plan_url:bp.on?(FORM.pdf_plan||''):((PLAN_EDIT&&PLAN_EDIT.pdf_plan_url)||''), post_note_url:bn.on?(FORM.post_note||''):((PLAN_EDIT&&PLAN_EDIT.post_note_url)||''), tfiles:{} };
+  Object.keys(tf).forEach(k=>{ if(tf[k]) TFV.tfiles[k]=tf[k]; });
   const d={ plan_id:id, teacher_id:(PLAN_EDIT&&PLAN_EDIT.teacher_id)||Store.user.username, group:val('p_group'), subject:val('p_subject'), grade_level:val('p_level'), unit:val('p_unit'), title:val('p_title'),
-    term:val('p_term'), year:val('p_year'), pdf_plan_url:FORM.pdf_plan||'', post_note_url:FORM.post_note||'', rank:val('p_rank'), result:val('p_result'), problem:val('p_problem'), solution:val('p_solution'),
+    term:val('p_term'), year:val('p_year'), pdf_plan_url:TFV.pdf_plan_url, post_note_url:TFV.post_note_url, tfiles:TFV.tfiles, rank:val('p_rank'), result:val('p_result'), problem:val('p_problem'), solution:val('p_solution'),
     status:'รอประเมิน', created_at:(PLAN_EDIT&&PLAN_EDIT.created_at)||new Date().toISOString() };
   if(!d.subject||!d.title) return SW.err('กรุณากรอกรายวิชาและชื่อแผน');
-  if(!d.pdf_plan_url) return SW.err('กรุณาแนบไฟล์แผน PDF');
+  if(TFV.planOn&&!d.pdf_plan_url) return SW.err('กรุณาแนบไฟล์แผน PDF');
   await busy(()=>commit([{c:'LessonPlans',op:'set',id,data:d}])); PLAN_EDIT=null; SW.ok('ส่งแผนเรียบร้อย','รอผู้นิเทศประเมิน'); render(); updateNoti(); setTimeout(svPrompt,2000);
 }
 
@@ -1140,10 +1157,11 @@ function attChips(e){ const f=(e.files||[]).filter(Boolean), ph=(e.photos||[]).f
   return (ph.length?`<span class="badge" title="รูปที่แนบกับการประเมินนี้">🖼️ ${ph.length} รูป</span>`:'')+f.map((u,i)=>docChip(u,'ไฟล์แนบ '+(i+1),'📎')).join(''); }
 function docChip(url,label,ic,off){ off=off||'ครูยังไม่ส่ง';
   return url?`<button type="button" class="dchip" onclick="viewPdf('${esc(url)}','${esc(label)}')">${ic} ${esc(label)}</button>`:`<span class="dchip off" title="${esc(off)}">${ic} ${esc(label)}<i>${esc(off)}</i></span>`; }
-function teacherDocs(p,big,off){ return `<div class="dchips${big?' big':''}">${docChip(p&&p.pdf_plan_url,big?'ดูแผน':'แผนการสอน','📄',off)}${docChip(p&&p.post_note_url,big?'ดูบันทึกหลังสอน':'บันทึกหลังสอน','📝',off)}</div>`; }
-function refreshBDocs(){ const b=$('#bdocs'); if(!b) return; const tid=val('f_teacher'), L=Store.data.LessonPlans||{};
+function teacherDocs(p,big,off,ids){ const B=tfOn().filter(b=>!ids||ids.indexOf(b.id)>=0);
+  return `<div class="dchips${big?' big':''}">${B.map(b=>{ const c=TF_CORE.find(d=>d.id===b.id); return docChip(tfUrl(p,b.id),c?(big?c.big:c.small):(big?'ดู'+b.label:b.label),c?c.ic:'📎',off); }).join('')}</div>`; }
+function refreshBDocs(){ const b=$('#bdocs'); if(!b) return; const tid=val('f_teacher'), L=Store.data.LessonPlans||{}, dids=EV?ropts(EV.type).docs:null;
   const pid=EV&&EV.plan_id&&(L[EV.plan_id]||{}).teacher_id===tid?EV.plan_id:'';
-  b.innerHTML=tid?teacherDocs(planOf(tid,val('f_term'),val('f_year'),pid),true):teacherDocs(null,true,'เลือกครูก่อน'); }
+  b.innerHTML=tid?teacherDocs(planOf(tid,val('f_term'),val('f_year'),pid),true,undefined,dids):teacherDocs(null,true,'เลือกครูก่อน',dids); }
 function evalTable(E,actions){
   const staff=Store.user.role==='Admin'||Store.user.role==='Supervisor';
   if(!E.length) return '<div class="empty">ไม่พบข้อมูล</div>';
@@ -1636,15 +1654,20 @@ async function openDrive(){ if(MODE!=='gas') return toast('โหมดทดล
 function exportCsv(k){
   if(k==='users') return csv('ผู้ใช้งาน',[['username','ชื่อ','บทบาท','กลุ่มสาระ','โรงเรียน','สถานะ'],...users().map(u=>[u.username,u.name,u.role,u.group,u.school,u.status])]);
   if(k==='evals'){ const E=Object.values(Store.data.Evaluations); return csv('ผลการประเมิน',[['eval_id','แบบ','ครู','กลุ่มสาระ','วิชา','ชั้น','ภาค','ปี','วันที่','โรงเรียน','ผู้นิเทศ','คะแนน/100','ระดับ','ข้อเสนอแนะ','PDF','วิทยฐานะ(ที่บันทึกในแบบ)','จำนวนรูปแนบ','ลิงก์รูปแนบ','ลิงก์ไฟล์แนบ PDF'],...E.map(e=>[e.eval_id,e.type,uname(e.teacher_id),e.group,e.subject,e.grade_level,e.term,e.year,e.date,e.school,(e.evaluators||[]).map(uname).join('; '),e.total_normalized,e.grade,e.comment,e.pdf_drive_link,(e.extra&&e.extra.grade_rank)||'',(e.photos||[]).length,(e.photos||[]).join(' | '),(e.files||[]).join(' | ')])]); }
-  if(k==='plans') return csv('แผนการจัดการเรียนรู้',[['plan_id','ครู','วิชา','เรื่อง','ภาค','ปี','สถานะ','คะแนน','ไฟล์แผน','บันทึกหลังสอน'],...Object.values(Store.data.LessonPlans).map(p=>[p.plan_id,uname(p.teacher_id),p.subject,p.title,p.term,p.year,p.status,p.score,p.pdf_plan_url,p.post_note_url])]);
+  if(k==='plans') return csv('แผนการจัดการเรียนรู้',[['plan_id','ครู','วิชา','เรื่อง','ภาค','ปี','สถานะ','คะแนน','ไฟล์แผน','บันทึกหลังสอน','ไฟล์อื่นที่ครูแนบ'],...Object.values(Store.data.LessonPlans).map(p=>[p.plan_id,uname(p.teacher_id),p.subject,p.title,p.term,p.year,p.status,p.score,p.pdf_plan_url,p.post_note_url,Object.keys(p.tfiles||{}).map(k=>((tfBlocks().find(b=>b.id===k)||{}).label||k)+': '+p.tfiles[k]).join(' | ')])]);
   if(k==='books') return csv('การจองนิเทศ',[['booking_id','วันที่','คาบ','ครู','สถานะ','หมายเหตุ'],...Object.values(Store.data.Bookings).map(b=>[b.booking_id,b.date,b.period_no,uname(b.teacher_id),b.is_locked?'ล็อก':'จอง',b.note])]);
 }
 
 /* ---------- Settings ---------- */
-let STAB='rubric', RB=null, RBT='A';
+let STAB='rubric', RB=null, RBT='A', TFB=null;
+function tfAdd(){ TFB.push({id:'tf'+Date.now().toString(36).slice(-6),label:'ไฟล์เอกสารใหม่',type:'pdf',on:true,core:false}); render(); }
+async function tfDel(i){ if(!(await SW.confirm('ลบช่องนี้?','ไฟล์ที่ครูเคยแนบในช่องนี้จะไม่แสดงอีก ถ้าแค่ไม่อยากให้ครูเห็นช่อง ให้ใช้ “ซ่อน” แทน (เอาติ๊ก “แสดง” ออก)'))) return; TFB.splice(i,1); render(); }
+function tfReset(){ TFB=TF_CORE.map(d=>({id:d.id,label:d.label,type:'pdf',on:true,core:true})); render(); }
+async function tfSave(){ const L=TFB.map(b=>({id:b.id,label:String(b.label||'').trim().slice(0,60)||((TF_CORE.find(d=>d.id===b.id)||{}).label)||'ไฟล์เอกสาร',type:b.core?'pdf':b.type,on:!!b.on})); await saveSet({teacher_files:L}); }
+function rbDoc(id,chk){ const all=tfOn().map(b=>b.id), O=roptsOf(RB[RBT],RBT); let cur=(O.docs||all).slice(); cur=chk?(cur.indexOf(id)<0?cur.concat(id):cur):cur.filter(x=>x!==id); RB[RBT].opts={...O,docs:cur}; render(); }
 function rbOpt(k,v){ RB[RBT].opts={...roptsOf(RB[RBT],RBT),[k]:v}; render(); }
 VIEWS.settings = ()=>{
-  const s=Store.settings, si=s.school_info||{}, T=[['rubric','ข้อคำถาม A/B/C'],['clear','🧹 ล้างข้อมูล'],['demo','🧪 ข้อมูลจำลอง'],['year','ภาคเรียน/ปีการศึกษา'],['school','สถานศึกษา & คาบเรียน'],['storage','💾 พื้นที่จัดเก็บ'],['export','📤 ส่งออกข้อมูลประเมิน'],['docs','📄 ตัวอย่างเอกสาร'],['theme','ธีมสี'],['dev','ผู้พัฒนา']];
+  const s=Store.settings, si=s.school_info||{}, T=[['rubric','ข้อคำถาม A/B/C'],['tfiles','📤 ช่องอัปโหลดฝั่งครู'],['clear','🧹 ล้างข้อมูล'],['demo','🧪 ข้อมูลจำลอง'],['year','ภาคเรียน/ปีการศึกษา'],['school','สถานศึกษา & คาบเรียน'],['storage','💾 พื้นที่จัดเก็บ'],['export','📤 ส่งออกข้อมูลประเมิน'],['docs','📄 ตัวอย่างเอกสาร'],['theme','ธีมสี'],['dev','ผู้พัฒนา']];
   let body='';
   if(STAB==='rubric'){ if(!RB) RB=JSON.parse(JSON.stringify(s.rubrics||DEFAULT_RUBRICS)); const R=RB[RBT], n=R.cats.reduce((a,c)=>a+c.items.length,0);
     body=`<div class="row" style="margin-bottom:12px">${['A','B','C'].map(t=>`<button class="tab ${RBT===t?'on':''}" onclick="RBT='${t}';render()">แบบ ${t}</button>`).join('')}<span class="sp"></span>
@@ -1658,6 +1681,7 @@ VIEWS.settings = ()=>{
        +row(O.photos>0,"rbOpt('photos',this.checked?2:0)",'ให้แนบรูปภาพ',O.photos>0?'<span class="muted" style="margin-left:8px">จำนวนรูป</span>'+cnt('photos',4):'','ตัวอย่าง: ไปเยี่ยมชั้นเรียนแล้วอยากเก็บภาพบรรยากาศ ให้ติ๊กข้อนี้ แล้วเลือกจำนวนรูปที่ต้องการ (เช่น 2 รูป)')
        +row(O.files>0,"rbOpt('files',this.checked?1:0)",'ให้แนบไฟล์ PDF',O.files>0?'<span class="muted" style="margin-left:8px">จำนวนไฟล์</span>'+cnt('files',3):'','ตัวอย่าง: อยากเก็บใบงานหรือเอกสารที่ครูใช้สอนในคาบนั้นไว้กับผลประเมิน ให้ติ๊กข้อนี้ แล้วเลือกจำนวนไฟล์')
        +row(O.plan,"rbOpt('plan',this.checked)",'ให้เลือกแผนที่ครูส่งมาประเมิน','','ตัวอย่าง: แบบประเมินแผนการจัดการเรียนรู้ จะมีรายการแผนที่ครูส่งมา กดเลือกแผนแล้วเปิดดูแผนไปพร้อมกับให้คะแนนได้เลย')
+       +(O.plan?`<div style="margin:0 0 8px 26px"><div style="font-size:13px"><b>ไฟล์ของครูที่ให้เปิดดูได้ในหน้าประเมิน</b> <span class="muted">(ติ๊กได้หลายไฟล์ ไม่ติ๊กจะไม่แสดงในแบบนี้)</span></div>${tfOn().map(b=>`<label style="display:inline-flex;gap:6px;align-items:center;margin:4px 14px 0 0;cursor:pointer"><input type="checkbox" style="width:auto" ${(O.docs?O.docs.indexOf(b.id)>=0:true)?'checked':''} onchange="rbDoc('${b.id}',this.checked)">${esc(tfShort(b))}</label>`).join('')}<div class="muted" style="font-size:12.5px;margin-top:4px">ตัวอย่าง: นอกจากแผนฯ ถ้าครูแนบ “ใบงาน” หรือ “สื่อการสอน” มาด้วย ติ๊กไว้ ท่านจะเปิดดูไฟล์เหล่านั้นได้จากหน้าประเมินเลย (แอดมินระบบเพิ่มช่องไฟล์ได้ที่ ตั้งค่า → ช่องอัปโหลดฝั่งครู)</div></div>`:'')
        +row(O.rank,"rbOpt('rank',this.checked)",'แสดงวิทยฐานะของครู','','ตัวอย่าง: ถ้าอยากให้ผลประเมินระบุวิทยฐานะของครู เช่น ชำนาญการ ให้ติ๊กข้อนี้ (ระบบดึงจากข้อมูลครูให้อัตโนมัติ)')+'</div>'; })()}
      ${R.cats.map((c,ci)=>`<div class="acc-h" style="cursor:default"><input value="${esc(c.name)}" onchange="RB.${RBT}.cats[${ci}].name=this.value" style="font-weight:600"><button class="btn sm del" onclick="RB.${RBT}.cats.splice(${ci},1);render()">ลบหมวด</button></div>
        ${c.items.map((x,ii)=>`<div class="row" style="margin:4px 0 4px 20px"><span class="muted" style="width:28px">${ii+1}.</span><input value="${esc(x)}" onchange="RB.${RBT}.cats[${ci}].items[${ii}]=this.value" style="flex:1"><button class="btn sm del" onclick="RB.${RBT}.cats[${ci}].items.splice(${ii},1);render()">✕</button></div>`).join('')}
@@ -1665,6 +1689,14 @@ VIEWS.settings = ()=>{
      <div class="row" style="margin-top:14px"><button class="btn" onclick="RB.${RBT}.cats.push({name:'หมวดใหม่',items:['ข้อประเมินใหม่']});render()">＋ เพิ่มหมวด</button><button class="btn ghost" onclick="RB=JSON.parse(JSON.stringify(DEFAULT_RUBRICS));render()">คืนค่าเริ่มต้น</button><button class="btn" onclick="rbExport()">⬇️ ส่งออก JSON</button><button class="btn" onclick="rbImport()">⬆️ นำเข้า JSON</button><span class="sp"></span>
       <button class="btn pri" onclick="saveRubrics()">💾 บันทึกข้อคำถาม</button></div>
      <div class="muted" style="margin-top:8px">หมายเหตุ: ไม่ว่าจะมีกี่ข้อ ระบบจะคำนวณ (ผลรวม ÷ (จำนวนข้อ×5)) × 100 เสมอ · ผลประเมินเดิมเก็บคะแนนไว้แล้ว ไม่เปลี่ยนตาม</div>`; }
+  if(STAB==='tfiles'){ if(!TFB) TFB=JSON.parse(JSON.stringify(tfBlocks())); const n=TFB.length;
+    body=`<div class="muted" style="margin-bottom:12px;font-size:13.5px;line-height:1.7">กำหนดช่องอัปโหลดไฟล์ในหน้า “ส่งแผน” ของครู ตอนนี้มี <b>${n} ช่อง</b> (ค่าเริ่มต้นคือ 2 ช่อง: ไฟล์แผนฯ และบันทึกหลังสอน)<br>• ติ๊ก “แสดง” = ครูเห็นช่องนี้ · เอาติ๊กออก = ซ่อน ครูจะไม่เห็นช่อง (ไฟล์ที่ครูเคยแนบไว้ยังอยู่ครบ)<br>• ตัวอย่าง: อยากให้ครูแนบ “ใบงาน” กับ “สื่อการสอน (PowerPoint)” มาพร้อมแผน ให้กด ＋ เพิ่มช่องอัปโหลด แล้วตั้งชื่อช่อง และเลือกชนิดไฟล์<br>• ถ้าซ่อนช่อง “ไฟล์แผนฯ” ครูจะส่งแผนได้โดยไม่ต้องแนบไฟล์แผน</div>
+     ${TFB.map((b,i)=>`<div class="row" style="gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap">
+       <label style="display:flex;gap:6px;align-items:center;cursor:pointer;white-space:nowrap;min-width:84px"><input type="checkbox" style="width:auto" ${b.on?'checked':''} onchange="TFB[${i}].on=this.checked;render()"><b>${b.on?'แสดง':'ซ่อน'}</b></label>
+       <input value="${esc(b.label)}" onchange="TFB[${i}].label=this.value" style="flex:1;min-width:200px" placeholder="ชื่อช่อง เช่น ใบงาน">
+       ${b.core?'<span class="badge y">PDF · ช่องหลัก</span>':`<select style="width:auto" onchange="TFB[${i}].type=this.value">${Object.keys(TF_TYPES).map(k=>`<option value="${k}" ${b.type===k?'selected':''}>${TF_TYPES[k].t}</option>`).join('')}</select><button class="btn sm del" onclick="tfDel(${i})">ลบช่อง</button>`}</div>`).join('')}
+     <div class="row" style="margin-top:14px"><button class="btn" ${n>=10?'disabled':''} onclick="tfAdd()">＋ เพิ่มช่องอัปโหลด</button><button class="btn ghost" onclick="tfReset()">คืนค่าเริ่มต้น (2 ช่อง)</button><span class="sp"></span><button class="btn pri" onclick="tfSave()">💾 บันทึก</button></div>
+     <div class="muted" style="margin-top:8px;font-size:12.5px">สูงสุด 10 ช่อง · ช่องที่เพิ่มใหม่จะแสดงในหน้าส่งแผนของครูและเปิดดูได้จากหน้าประเมินของผู้นิเทศ</div>`; }
   if(STAB==='export'){ const ys=[...new Set(Object.values(Store.data.Evaluations).map(e=>e.year).filter(Boolean))].sort(), n=Object.keys(Store.data.Evaluations).length;
     body=`<div class="muted" style="margin-bottom:14px">ส่งออกผลการประเมินทั้งหมดเป็นไฟล์ .xlsx ไว้เป็นฐานข้อมูลสำหรับทำรายงาน และใช้รวมข้อมูลข้ามระบบ ศน. ปลายปี (ไม่ขึ้นกับตัวกรองในแดชบอร์ด)</div>
      <div class="grid g2"><div class="pc" style="cursor:default;padding:20px"><h3 style="margin-bottom:8px">📤 ผลการประเมินทั้งหมด</h3>
@@ -1798,7 +1830,7 @@ async function saveRubrics(){
   ['A','B','C'].forEach(t=>{ if(RB[t]) RB[t].kind=kindOfRub(RB[t],t); RB[t].opts=roptsOf(RB[t],t); });
   await saveSet({rubrics:RB});
 }
-async function saveSet(d){ await busy(()=>commit([{c:'Settings',op:'merge',id:'main',data:d}])); if(d.rubrics) RB=null; SW.ok('บันทึกการตั้งค่าแล้ว'); shell(); go(allowed(cur)?cur:'settings'); }
+async function saveSet(d){ await busy(()=>commit([{c:'Settings',op:'merge',id:'main',data:d}])); if(d.rubrics) RB=null; if(d.teacher_files) TFB=null; SW.ok('บันทึกการตั้งค่าแล้ว'); shell(); go(allowed(cur)?cur:'settings'); }
 function saveSchool(){ const s=Store.settings; saveSet({ school_info:{...s.school_info,name:val('s_sname'),affiliation:val('s_aff'),director:val('s_dir'),logo:FORM.logo!=null?FORM.logo:s.school_info.logo},
   periods:s.periods.map((p,i)=>({no:p.no,time:val('pr_'+i)})) }); }
 const rdTheme=()=>({primary:val('t1'),primary2:val('t2'),accent:val('t3')});
