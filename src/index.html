@@ -293,6 +293,7 @@ tbody tr:hover td{background:rgba(255,255,255,.9)}
 .acc-b{display:none}.acc-b.on{display:block}
 .toast{position:fixed;right:20px;bottom:20px;z-index:9000;padding:12px 18px;border-radius:16px;background:rgba(30,41,59,.9);color:#fff;font-size:14px;animation:min .3s}
 .foot{text-align:center;font-size:12px;line-height:1.7;color:var(--muted);padding:6px 0 10px}
+.ver{display:inline-block;margin-top:6px;font-size:11px;color:var(--muted);opacity:.75;cursor:pointer;border-bottom:1px dotted currentColor}.ver:hover{opacity:1}
 .reveal{opacity:0;transform:translateY(18px);transition:opacity .55s ease,transform .55s cubic-bezier(.2,.8,.2,1)}
 .reveal.in{opacity:1;transform:none}
 @media (max-width:1100px){.g5{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(2,1fr)}.per{grid-template-columns:repeat(2,1fr)}}
@@ -339,6 +340,14 @@ const SW = {
   err:(t,x)=>window.Swal?Swal.fire({icon:'error',title:t,text:x||'',confirmButtonColor:getCss('--p')}):alert(t+'\n'+(x||'')),
   confirm:async(t,x)=>window.Swal?(await Swal.fire({icon:'question',title:t,text:x||'',showCancelButton:true,confirmButtonText:'ยืนยัน',cancelButtonText:'ยกเลิก',confirmButtonColor:getCss('--p')})).isConfirmed:confirm(t)
 };
+/* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
+const APP_VERSION = '1.1';
+const APP_CHANGELOG = [
+  {v:'1.1', d:'8 พ.ย. 2569', n:['ศน. กำหนด “ประเภทแบบประเมิน” ของแบบ A/B/C ได้เอง (ประเมินการสอน / ประเมินแผน / เยี่ยมชั้นเรียน) หน้าจอทำงานตามประเภทที่ตั้ง ไม่ผูกกับตัวอักษร A/B/C','เพิ่มเลขเวอร์ชันและประวัติอัปเดตใต้การ์ดหน้าแรก']},
+  {v:'1.0', d:'6 พ.ย. 2569', n:['เวอร์ชันแรกของศูนย์อัปเดต: ระบบนิเทศและประเมินการสอน']}
+];
+function showChangelog(){ const h=APP_CHANGELOG.map(x=>`<div style="text-align:left;margin:0 0 12px"><b>เวอร์ชัน ${esc(x.v)}</b> <span style="color:#888;font-size:12px">· ${esc(x.d)}</span><ul style="margin:4px 0 0 18px;padding:0;font-size:13.5px">${x.n.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>`).join('');
+  if(window.Swal) Swal.fire({title:'ประวัติอัปเดตระบบ',html:h,confirmButtonText:'ปิด',confirmButtonColor:getCss('--p')}); else alert(APP_CHANGELOG.map(x=>x.v+' ('+x.d+')\n- '+x.n.join('\n- ')).join('\n\n')); }
 function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
 
 function gasCall(fn,...args){
@@ -2670,7 +2679,7 @@ function landingView(){
       <ul>${P.feats.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>
       <button class="btn pri" style="justify-content:center">เข้าสู่ระบบ <span class="arr">→</span></button></div>`; }).join('')}</div>
    <div class="hbtns reveal in"><button class="hbtn" onclick="helpVideo()">${HSVG.play}ชมวิดีโอวิธีใช้งาน</button><button class="hbtn" onclick="helpManual()">${HSVG.doc}ดาวน์โหลดคู่มือ</button></div>
-   <div class="foot">ออกแบบระบบ โดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ<br>พัฒนาระบบ โดย นนทพัทธ์ หิรัญเรือง</div></div>`;
+   <div class="foot">ออกแบบระบบ โดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ<br>พัฒนาระบบ โดย นนทพัทธ์ หิรัญเรือง<br><span class="ver" onclick="showChangelog()" title="ดูประวัติอัปเดต">เวอร์ชัน ${APP_VERSION}</span></div></div>`;
   if(matchMedia('(hover:hover)').matches && !matchMedia('(prefers-reduced-motion:reduce)').matches)
     document.querySelectorAll('.pcard').forEach(c=>{ let raf=0;
       c.addEventListener('pointermove',e=>{ const r=c.getBoundingClientRect(), x=(e.clientX-r.left)/r.width, y=(e.clientY-r.top)/r.height;
