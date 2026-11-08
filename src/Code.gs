@@ -225,8 +225,10 @@ function apiCommit(token, opsJson){
       (by[o.c] = by[o.c]||[]).push(o);
     });
     const lpPrev = by.LessonPlans ? readColl_('LessonPlans') : null;
+    const stPrev = (by.Settings && u.role==='Admin') ? (readColl_('Settings').main || {}) : null;
     Object.keys(by).forEach(c=>writeColl_(c, by[c]));
     if (lpPrev) trashReplacedPlanFiles_(u, lpPrev, by.LessonPlans);
+    if (stPrev) purgeRemovedTeacherBlocks_(u, stPrev, by.Settings);
     return JSON.stringify({ ok:true });
   } finally { lock.releaseLock(); }
 }
@@ -570,6 +572,21 @@ function trashReplacedPlanFiles_(u, prev, ops){
         }catch(e){}
       });
     });
+  }catch(e){}
+}
+/* แอดมินลบช่องอัปโหลดฝั่งครู: เอาไฟล์ของช่องนั้นออกจากแผน แล้วย้ายไฟล์ลงถังขยะ */
+function purgeRemovedTeacherBlocks_(u, stPrev, ops){
+  try{
+    const o = ops.filter(function(x){ return x.id==='main' && x.data && Array.isArray(x.data.teacher_files); }).pop(); if (!o) return;
+    const keep = o.data.teacher_files.map(function(b){ return b && b.id; });
+    const gone = (stPrev.teacher_files||[]).map(function(b){ return b && b.id; }).filter(function(id){ return /^tf/.test(String(id||'')) && keep.indexOf(id)<0; });
+    if (!gone.length) return;
+    const lp = readColl_('LessonPlans'), w = [], ids = [];
+    Object.keys(lp).forEach(function(k){ const t = lp[k].tfiles; if (!t) return; let ch = false; const nt = Object.assign({}, t), nn = Object.assign({}, lp[k].tfnames||{});
+      gone.forEach(function(g){ if (nt[g]!=null){ const d = driveId_(nt[g]); if (d) ids.push(d); delete nt[g]; delete nn[g]; ch = true; } });
+      if (ch) w.push({op:'merge', id:k, data:{tfiles:nt, tfnames:nn}}); });
+    if (w.length) writeColl_('LessonPlans', w);
+    ids.forEach(function(id){ if (referenced_(id)) return; try{ const f = DriveApp.getFileById(id); if (underPlans_(f)) f.setTrashed(true); }catch(e){} });
   }catch(e){}
 }
 /* ไฟล์ที่เพิ่งอัปโหลดแล้วกด ✕ หรืออัปโหลดทับก่อนบันทึก: ลบได้เฉพาะไฟล์ของตนเองที่ยังไม่ถูกบันทึกใช้ */
