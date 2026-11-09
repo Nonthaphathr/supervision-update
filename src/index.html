@@ -344,8 +344,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.3';
+const APP_VERSION = '1.3.4';
 const APP_CHANGELOG = [
+  {v:'1.3.4', d:'9 พ.ย. 2569', n:['เพิ่มตัวเลือก “ครูอัตราจ้าง” และ “ผู้ช่วยครูอัตราจ้าง” ในช่องวิทยฐานะ (หน้าจัดการผู้ใช้ หน้าประเมิน หน้าส่งแผนของครู) และแสดงถูกต้องในเกียรติบัตร']},
   {v:'1.3.3', d:'9 พ.ย. 2569', n:['แอดมินระบบเปลี่ยนชื่อผู้ใช้ของคนเดิมได้ (ปุ่ม “เปลี่ยนชื่อผู้ใช้” ในหน้าแก้ไข) ระบบย้ายแผน ผลประเมิน การจอง ให้ตามอัตโนมัติ รหัสผ่านเดิมยังใช้ได้','ตรวจชื่อผู้ใช้ตอนเพิ่มและนำเข้า .xlsx: ตัดช่องว่าง/อักขระล่องหนออก และเตือนถ้ามีสัญลักษณ์แปลก (แสดง ⚠️ ในรายชื่อ)']},
   {v:'1.3.2', d:'9 พ.ย. 2569', n:['เพิ่ม/แก้ไขผู้ใช้ที่หน้าจัดการผู้ใช้แล้วตั้งรหัสผ่านเอง จะมีหน้าต่างให้พิมพ์ ดาวน์โหลด CSV หรือสร้าง PDF เก็บในโฟลเดอร์ “บัญชีผู้ใช้ (ลับ)” ใน Drive']},
   {v:'1.3.1', d:'8 พ.ย. 2569', n:['ซ่อนช่องอัปโหลดแล้ว ผู้นิเทศยังเปิดดูไฟล์ที่ครูแนบไว้แล้วได้','ช่องอัปโหลดที่เพิ่มใหม่ แสดงในหน้าประเมินให้อัตโนมัติ','ลบช่องอัปโหลด: ไฟล์ของช่องนั้นย้ายลงถังขยะ Drive และ CSV แสดงชื่อช่องแทนรหัส','แก้ผลประเมินเก่า ใช้ตัวเลือกที่บันทึกไว้กับผลประเมินนั้น','เกียรติบัตร: ผู้ลงนามคนที่ 2 ค่าเริ่มต้นเป็น นางสาวธันร์ญพรน์ ไชยพรรค หัวหน้ากลุ่มงานนิเทศการศึกษา']},
@@ -678,7 +679,7 @@ const normName=s=>String(s||'').trim().replace(/^(นางสาว|น\.ส\.|
 const roleOfRow=(v,pos)=>{ v=String(v||'').trim(); const M={'ครู':'Teacher','ผู้บริหาร':'User','ผู้บริหารสถานศึกษา':'User','ศน.':'Supervisor','ศึกษานิเทศก์':'Supervisor','แอดมินโรงเรียน':'SchoolAdmin','แอดมินระบบ':'Admin'}; return M[v]||v||(/ผู้อำนวยการ/.test(String(pos||''))?'User':'Teacher'); };
 function teacherOpts(sc){ return [['','— เลือกครู —'],...teachers(sc).map(t=>[t.username,t.name+(t.rank?' ('+t.rank+')':'')])]; }
 function onEvalSchool(){ EV.school=val('f_school'); const o=teacherOpts(EV.school); $('#f_teacher').innerHTML=opt(o,''); $('#f_tc').textContent=(o.length-1)+' คน'; }
-function rankOpts(v){ const T=['','ครูผู้ช่วย','ไม่มีวิทยฐานะ','ชำนาญการ','ชำนาญการพิเศษ','เชี่ยวชาญ','เชี่ยวชาญพิเศษ']; return [['','— เลือกวิทยฐานะ —'],...T.slice(1).concat(v&&!T.includes(v)?[v]:[]).map(x=>[x,x])]; }
+function rankOpts(v){ const T=['','ครูผู้ช่วย','ไม่มีวิทยฐานะ','ชำนาญการ','ชำนาญการพิเศษ','เชี่ยวชาญ','เชี่ยวชาญพิเศษ','ครูอัตราจ้าง','ผู้ช่วยครูอัตราจ้าง']; return [['','— เลือกวิทยฐานะ —'],...T.slice(1).concat(v&&!T.includes(v)?[v]:[]).map(x=>[x,x])]; }
 function onTeacher(){ const t=Store.data.Users[val('f_teacher')]; const br=$('#b_rank'); if(br){ const r=(t&&t.rank)||''; br.innerHTML=opt(rankOpts(r),r); }
   if(t){ if(t.group) $('#f_group').value=t.group; if(t.school) $('#f_school').value=t.school; } refreshBDocs(); }
 function photoCard(title,n){ n=n==null?2:n; if(!n) return '';
@@ -894,7 +895,7 @@ VIEWS.submitPlan = ()=>{
    </div></div>
    <div class="card glass reveal"><h3>อัปโหลดเอกสาร</h3>${PLAN_EDIT?'<div class="muted" style="margin:-4px 0 12px">อัปโหลดผิด? กด ✕ ที่ไฟล์เดิมแล้วอัปโหลดใหม่ เมื่อกด “บันทึกการแก้ไข” ไฟล์ใหม่จะแทนที่ไฟล์เดิม (ไฟล์เดิมถูกย้ายลงถังขยะ)</div>':''}<div class="grid g2">${tfOn().map(b=>dropzone(b.id,b.label+(b.type==='pdf'?' (PDF)':''),TF_TYPES[b.type].acc,FORM[b.id])).join('')}</div></div>
    <div class="card glass reveal"><h3>บันทึกผลหลังการจัดการเรียนรู้</h3><div class="grid g2">
-    <label class="f">วิทยฐานะ<select id="p_rank">${opt(['ครูผู้ช่วย','ครู (ไม่มีวิทยฐานะ)','ครูชำนาญการ','ครูชำนาญการพิเศษ','ครูเชี่ยวชาญ','ครูเชี่ยวชาญพิเศษ'],p.rank)}</select></label><div></div>
+    <label class="f">วิทยฐานะ<select id="p_rank">${opt(['ครูผู้ช่วย','ครู (ไม่มีวิทยฐานะ)','ครูชำนาญการ','ครูชำนาญการพิเศษ','ครูเชี่ยวชาญ','ครูเชี่ยวชาญพิเศษ','ครูอัตราจ้าง','ผู้ช่วยครูอัตราจ้าง'],p.rank)}</select></label><div></div>
     <label class="f">ผลการจัดการเรียนรู้<textarea id="p_result">${esc(p.result||'')}</textarea></label>
     <label class="f">ปัญหา / อุปสรรค<textarea id="p_problem">${esc(p.problem||'')}</textarea></label>
     <label class="f" style="grid-column:1/-1">แนวทางแก้ไข / พัฒนา<textarea id="p_solution">${esc(p.solution||'')}</textarea></label></div>
@@ -1290,7 +1291,7 @@ VIEWS.users = ()=>{ const all=users().filter(u=>(Store.user.role!=='SchoolAdmin'
      <td class="row"><button class="btn sm" onclick="userForm('${esc(u.username)}')">✏️</button>${u.username!==Store.user.username?`<button class="btn sm ${u.status==='active'?'del':''}" onclick="toggleUser('${esc(u.username)}')">${u.status==='active'?'ระงับ':'เปิดใช้'}</button>`:''}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">ไม่พบผู้ใช้</td></tr>'}</tbody></table></div></div>`; };
 AFTER.users=()=>initReveal();
 const roleTh = r=>({Admin:'แอดมินระบบ',Supervisor:'ศน.',Teacher:'ครู',User:'ผู้บริหาร',SchoolAdmin:'แอดมินโรงเรียน'}[r]||r);
-const RANKS=['','ครูผู้ช่วย','ไม่มีวิทยฐานะ','ชำนาญการ','ชำนาญการพิเศษ','เชี่ยวชาญ','เชี่ยวชาญพิเศษ','ศึกษานิเทศก์ชำนาญการ','ศึกษานิเทศก์ชำนาญการพิเศษ','ศึกษานิเทศก์เชี่ยวชาญ','ศึกษานิเทศก์เชี่ยวชาญพิเศษ'];
+const RANKS=['','ครูผู้ช่วย','ไม่มีวิทยฐานะ','ชำนาญการ','ชำนาญการพิเศษ','เชี่ยวชาญ','เชี่ยวชาญพิเศษ','ครูอัตราจ้าง','ผู้ช่วยครูอัตราจ้าง','ศึกษานิเทศก์ชำนาญการ','ศึกษานิเทศก์ชำนาญการพิเศษ','ศึกษานิเทศก์เชี่ยวชาญ','ศึกษานิเทศก์เชี่ยวชาญพิเศษ'];
 function userForm(id){ const SA=Store.user.role==='SchoolAdmin'; const u=id?Store.data.Users[id]:{role:'Teacher',status:'active',school:SA?Store.user.school:UFS};
   if(SA && id && (u.school!==Store.user.school || !['Teacher','User'].includes(u.role)) && id!==Store.user.username) return SW.err('แก้ไขได้เฉพาะครูและผู้บริหารในโรงเรียนของท่าน');
   const roleOpts = SA ? [['Teacher','Teacher (ครู)'],['User','User (ผู้บริหาร)']] : [['Admin','Admin (แอดมินระบบ)'],['SchoolAdmin','SchoolAdmin (แอดมินโรงเรียน)'],['Supervisor','Supervisor (ศน.ผู้นิเทศ)'],['Teacher','Teacher (ครู)'],['User','User (ผู้บริหาร)']];
@@ -1301,7 +1302,7 @@ function userForm(id){ const SA=Store.user.role==='SchoolAdmin'; const u=id?Stor
    <label class="f">รหัสผ่าน ${id?'(เว้นว่าง = ไม่เปลี่ยน)':''}<input id="u_pw" type="password"></label>
    <label class="f">ชื่อ-สกุล<input id="u_name" value="${esc(u.name||'')}"></label>
    <label class="f">บทบาท<select id="u_role" onchange="$('#u_sup').style.display=this.value==='Supervisor'?'':'none'">${opt(roleOpts,u.role)}</select></label>
-   <label class="f">ตำแหน่ง<input id="u_pos" value="${esc(u.position||'')}" placeholder="ครู / ศึกษานิเทศก์ / ผู้อำนวยการสถานศึกษา"></label>
+   <label class="f">ตำแหน่ง<input id="u_pos" value="${esc(u.position||'')}" placeholder="ครู / ครูอัตราจ้าง / ผู้ช่วยครูอัตราจ้าง / ศึกษานิเทศก์ / ผู้อำนวยการสถานศึกษา"></label>
    <label class="f">วิทยฐานะ<select id="u_rank">${opt(RANKS.includes(u.rank||'')?RANKS:[...RANKS,u.rank],u.rank||'')}</select></label>
    <label class="f">กลุ่มสาระ<select id="u_group">${opt(['',...SUBJECTS],u.group)}</select></label>
    <label class="f">โรงเรียน (สังกัด)<select id="u_school" ${SA?'disabled':''}>${opt(['',...schools()],u.school)}</select></label>
@@ -1956,6 +1957,7 @@ function certDefaultBg(col){ col=/^#[0-9a-fA-F]{6}$/.test(col||'')?col:'#B45309'
    ข้อมูลที่เขียนครบอยู่แล้ว (ขึ้นต้นด้วยชื่อตำแหน่ง) ใช้ตามเดิม ไม่แปลงซ้ำ */
 const CERT_POSPFX=['รองผู้อำนวยการ','ผู้อำนวยการ','ศึกษานิเทศก์','ครู'];
 function certRankFull(pos,rank){ rank=String(rank||'').trim(); pos=String(pos||'').trim(); if(!rank||rank==='-'||rank==='ไม่มีวิทยฐานะ') return '';
+  if(/อัตราจ้าง/.test(rank)) return rank;
   if(CERT_POSPFX.some(x=>rank.indexOf(x)===0)) return rank;
   const p=CERT_POSPFX.find(x=>pos.indexOf(x)===0); return p?p+rank:rank; }
 const certFill=(t,r)=>String(t||'').replace(/\{(grade|year|term|termtxt|school|name|score|pos|rank|posrank)\}/g,(m,k)=>String({grade:r.grade,year:r.year,term:r.term,termtxt:r.term?'ภาคเรียนที่ '+r.term:'ตลอดปีการศึกษา',school:r.school,name:r.name,score:(+r.score||0).toFixed(2),pos:r.pos||'',rank:certRankFull(r.pos,r.rank),posrank:r.pos?('ตำแหน่ง'+r.pos+(certRankFull(r.pos,r.rank)?' วิทยฐานะ'+certRankFull(r.pos,r.rank):'')):''}[k]));
