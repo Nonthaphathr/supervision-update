@@ -103,6 +103,11 @@ nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 0;scrollbar-width:thin
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.65),transparent)}
 .pcard:hover .shine{animation:shine .9s ease}
 @keyframes shine{to{left:130%}}
+@keyframes savePulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.55);transform:scale(1)}50%{transform:scale(1.07)}70%{box-shadow:0 0 0 16px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0);transform:scale(1)}}
+@keyframes saveBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.swal2-styled.pulse-save{background:linear-gradient(135deg,#16a34a,#22c55e)!important;color:#fff!important;font-weight:700!important;animation:savePulse 1.4s ease-out infinite}
+.swal2-styled.pulse-save .bob{display:inline-block;animation:saveBob .9s ease-in-out infinite}
+.swal-hint{margin-top:10px;font-size:13px;color:#15803D;background:rgba(34,197,94,.12);border-radius:10px;padding:8px 10px}
 .pcard .pi{transition:transform .4s cubic-bezier(.34,1.56,.64,1),box-shadow .3s}
 .pcard:hover .pi{transform:rotate(-8deg) scale(1.15);box-shadow:0 0 36px rgba(249,115,22,.6)}
 .pcard .num{transition:transform .4s,color .3s}.pcard:hover .num{transform:translateY(-4px) scale(1.15);color:rgba(249,115,22,.28)}
@@ -344,8 +349,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.6';
+const APP_VERSION = '1.3.7';
 const APP_CHANGELOG = [
+  {v:'1.3.7', d:'9 พ.ย. 2569', n:['ก่อนปิดหน้าต่างแสดงรหัสผ่านผู้ใช้ มีปุ่มสีเขียวกระพริบ “บันทึกรหัสเข้า Drive” ชวนกดเก็บรหัสไว้ก่อนปิด (แอดมินระบบ/ศน.)']},
   {v:'1.3.6', d:'9 พ.ย. 2569', n:['ครูอัตราจ้าง/ผู้ช่วยครูอัตราจ้าง: ช่องวิทยฐานะเว้นว่าง ไม่แสดงคำว่า “ไม่มีวิทยฐานะ” ในรายงานและเกียรติบัตร']},
   {v:'1.3.5', d:'9 พ.ย. 2569', n:['ช่อง “ตำแหน่ง” ในหน้าจัดการผู้ใช้เลือกได้จากรายการ เพิ่ม “ครูอัตราจ้าง” และ “ผู้ช่วยครูอัตราจ้าง” (เลือกแล้วระบบเว้นวิทยฐานะว่างให้ ไม่แสดงคำว่า “ไม่มีวิทยฐานะ”) ยังพิมพ์ตำแหน่งอื่นเองได้']},
   {v:'1.3.3', d:'9 พ.ย. 2569', n:['แอดมินระบบเปลี่ยนชื่อผู้ใช้ของคนเดิมได้ (ปุ่ม “เปลี่ยนชื่อผู้ใช้” ในหน้าแก้ไข) ระบบย้ายแผน ผลประเมิน การจอง ให้ตามอัตโนมัติ รหัสผ่านเดิมยังใช้ได้','ตรวจชื่อผู้ใช้ตอนเพิ่มและนำเข้า .xlsx: ตัดช่องว่าง/อักขระล่องหนออก และเตือนถ้ามีสัญลักษณ์แปลก (แสดง ⚠️ ในรายชื่อ)']},
@@ -1485,7 +1491,16 @@ function saShow(){ const g=SAGEN;
    <div class="row" style="margin-top:16px;flex-wrap:wrap;gap:8px"><span class="sp"></span>
      <button class="btn pri" onclick="saPdf('dl')">📄 ดาวน์โหลด PDF (รหัส + คู่มือ)</button>${MODE==='gas'?'<button class="btn acc" onclick="saPdf(\'drive\')">☁️ เก็บ PDF ใน Drive</button>':''}<button class="btn" onclick="saClose()">ปิด</button></div>`,'720px'); saQrFill(); }
 async function saQrFill(){ try{ const i=$('#sa_qr'); if(i&&SAGEN){ SAGEN.qr=SAGEN.qr||await qrDataUrl(saLink(),6); i.src=SAGEN.qr; } }catch(e){ const i=$('#sa_qr'); if(i) i.remove(); } }
-async function saClose(){ if(await SW.confirm('ปิดหน้าต่าง?','รหัสผ่านจะไม่แสดงอีก (ออกรหัสใหม่ได้ภายหลัง)')){ SAGEN=null; closeModal(); } }
+/* ก่อนปิดหน้าต่างรหัสผ่าน: เตือนว่าจะไม่แสดงอีก + ปุ่มบันทึกเข้า Drive (มีแอนิเมชันชวนกด) เฉพาะแอดมิน/ศน. */
+async function closeSecret(note,obj,save,done){
+  const can=MODE==='gas'&&['Admin','Supervisor'].includes(Store.user.role)&&!obj.saved;
+  const r=await Swal.fire({icon:'warning',title:'ปิดหน้าต่าง?',
+    html:`รหัสผ่านจะไม่แสดงอีก (${note})`+(can?'<div class="swal-hint">💡 ยังไม่ได้เก็บรหัสไว้ — กดปุ่มสีเขียวเพื่อบันทึกเข้า Drive ก่อนปิด</div>':obj.saved?'<div class="swal-hint">✅ บันทึกรหัสเข้า Drive แล้ว</div>':''),
+    showDenyButton:can,showCancelButton:true,confirmButtonText:'ปิดเลย',cancelButtonText:'กลับไปดู',denyButtonText:'<span class="bob">☁️</span> บันทึกรหัสเข้า Drive',
+    confirmButtonColor:'#94a3b8',reverseButtons:true,focusDeny:can,customClass:{denyButton:'pulse-save'}});
+  if(r.isDenied){ try{ await save(); obj.saved=true; }catch(e){ SW.err('บันทึกเข้า Drive ไม่สำเร็จ',e.message||String(e)); } return; }
+  if(r.isConfirmed) done(); }
+async function saClose(){ await closeSecret('ออกรหัสใหม่ได้ภายหลัง',SAGEN,()=>saPdf('drive'),()=>{ SAGEN=null; closeModal(); }); }
 function saDocHtml(){ const g=SAGEN, si=Store.settings.school_info||{}, s=Store.settings, at=g.at;
   const row=(k,v,mono)=>`<tr><th>${k}</th><td${mono?' class="sdm"':''}>${v}</td></tr>`;
   return `<html><head><meta charset="utf-8"><style>body{font-family:'Sarabun',sans-serif;color:#111;font-size:14px;line-height:1.5;margin:0}
@@ -1536,7 +1551,7 @@ async function saPdf(mode){ if(!SAGEN) return;
   else { saveBlob(new Blob([b64ToBytes(r.b64)],{type:'application/pdf'}),fname+'.pdf'); toast('ดาวน์โหลด PDF แล้ว'); }
   if(!r.manual) SW.err('แนบคู่มือไม่สำเร็จ','ได้เฉพาะหน้าข้อมูลรหัส · ดาวน์โหลดคู่มือแอดมินโรงเรียนแยกได้ที่ปุ่ม “ดาวน์โหลดคู่มือ” หน้าแรก');
 }
-async function genAccClose(){ if(await SW.confirm('ปิดหน้าต่าง?','รหัสผ่านจะไม่แสดงอีก (สร้างใหม่ได้ภายหลัง)')){ GENACC=null; window.GENACC_OPEN=false; closeModal(); } }
+async function genAccClose(){ await closeSecret('สร้างใหม่ได้ภายหลัง',GENACC,genAccDrive,()=>{ GENACC=null; window.GENACC_OPEN=false; closeModal(); }); }
 async function saveSchoolRec(id){
   const name=val('sc_name'); if(!name) return SW.err('กรอกชื่อโรงเรียน');
   const old=id?Store.data.Schools[id]:null, nid=id||val('sc_code')||uid('SC');
