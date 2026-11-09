@@ -341,8 +341,9 @@ const SW = {
   confirm:async(t,x)=>window.Swal?(await Swal.fire({icon:'question',title:t,text:x||'',showCancelButton:true,confirmButtonText:'ยืนยัน',cancelButtonText:'ยกเลิก',confirmButtonColor:getCss('--p')})).isConfirmed:confirm(t)
 };
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.3.2';
 const APP_CHANGELOG = [
+  {v:'1.3.2', d:'9 พ.ย. 2569', n:['เพิ่ม/แก้ไขผู้ใช้ที่หน้าจัดการผู้ใช้แล้วตั้งรหัสผ่านเอง จะมีหน้าต่างให้พิมพ์ ดาวน์โหลด CSV หรือสร้าง PDF เก็บในโฟลเดอร์ “บัญชีผู้ใช้ (ลับ)” ใน Drive']},
   {v:'1.3.1', d:'8 พ.ย. 2569', n:['ซ่อนช่องอัปโหลดแล้ว ผู้นิเทศยังเปิดดูไฟล์ที่ครูแนบไว้แล้วได้','ช่องอัปโหลดที่เพิ่มใหม่ แสดงในหน้าประเมินให้อัตโนมัติ','ลบช่องอัปโหลด: ไฟล์ของช่องนั้นย้ายลงถังขยะ Drive และ CSV แสดงชื่อช่องแทนรหัส','แก้ผลประเมินเก่า ใช้ตัวเลือกที่บันทึกไว้กับผลประเมินนั้น','เกียรติบัตร: ผู้ลงนามคนที่ 2 ค่าเริ่มต้นเป็น นางสาวธันร์ญพรน์ ไชยพรรค หัวหน้ากลุ่มงานนิเทศการศึกษา']},
   {v:'1.3', d:'8 พ.ย. 2569', n:['แอดมินระบบเพิ่ม ซ่อน หรือแสดงช่องอัปโหลดไฟล์ฝั่งครูได้เอง (ค่าเริ่มต้น 2 ช่อง: แผนฯ และบันทึกหลังสอน) ที่ ตั้งค่า → ช่องอัปโหลดฝั่งครู','ผู้นิเทศเลือกเปิดดูไฟล์อื่นของครูนอกจากแผนฯ ได้ในหน้าประเมิน']},
   {v:'1.2', d:'8 พ.ย. 2569', n:['ศน. ติ๊กเลือกได้เองว่าแบบประเมินแต่ละแบบจะให้แนบรูปภาพ (1–4 รูป) แนบไฟล์ PDF (1–3 ไฟล์) เลือกแผนที่ครูส่งมาประเมิน หรือแสดงวิทยฐานะครู','รายงานผลประเมิน (PDF) ส่งออก .xlsx/CSV และหน้าประวัติ แสดงรูป ไฟล์แนบ วิทยฐานะ และแผนที่ประเมินตามที่บันทึกไว้']},
@@ -1316,6 +1317,7 @@ async function saveUser(edit){
     schools:val('u_role')==='Supervisor'?[...document.querySelectorAll('.u_sc:checked')].map(c=>c.value):[]};
   if(pw) d.newPass=pw;
   await busy(()=>commit([{c:'Users',op:edit?'merge':'set',id:un,data:Object.assign(edit?{}:{signature_url:''},d)}])); closeModal(); render(); toast('บันทึกผู้ใช้แล้ว');
+  if(pw){ GENACC={school:d.school||'(ไม่ระบุโรงเรียน)',at:new Date(),accounts:[{name:d.name,position:d.position||'',rank:d.rank||'',username:un,password:pw}]}; showGenAcc(); }
 }
 async function toggleUser(id){ const u=Store.data.Users[id]; await busy(()=>commit([{c:'Users',op:'merge',id,data:{status:u.status==='active'?'suspended':'active'}}])); render(); }
 /* ---------- ข้อมูลโรงเรียน & นำเข้า .xlsx ---------- */
@@ -1385,12 +1387,12 @@ function genAccHtml(){ const g=GENACC, si=Store.settings.school_info||{}, url=(w
    ${g.accounts.map((a,i)=>`<tr><td class="c">${i+1}</td><td>${esc(a.name)}</td><td>${esc(a.position)}${a.rank?' '+esc(a.rank):''}</td><td class="mono">${esc(a.username)}</td><td class="mono">${esc(a.password)}</td></tr>`).join('')}</table>
    <div class="note">• เข้าใช้งานที่: ${esc(url)} › เลือกการ์ด "ครูผู้สอน / ผู้บริหาร"<br>• เข้าสู่ระบบครั้งแรกแล้วเปลี่ยนรหัสผ่านที่ปุ่ม 🔑 · เอกสารนี้มีข้อมูลรหัสผ่าน โปรดเก็บรักษาเป็นความลับ</div></body></html>`; }
 function showGenAcc(){ const g=GENACC; window.GENACC_OPEN=true;
-  openModal(`<div class="row" style="margin-bottom:10px"><h3>✅ สร้างบัญชีแล้ว ${g.accounts.length} คน</h3><span class="sp"></span><span class="badge">${esc(g.school)}</span></div>
+  openModal(`<div class="row" style="margin-bottom:10px"><h3>✅ ${g.accounts.length>1?'สร้างบัญชีแล้ว '+g.accounts.length+' คน':'ตั้งรหัสผ่านแล้ว'}</h3><span class="sp"></span><span class="badge">${esc(g.school)}</span></div>
    <div class="qi" style="background:rgba(250,204,21,.18)">⚠️ <span class="tx" style="font-size:13px">รหัสผ่านแสดงเพียงครั้งเดียว — พิมพ์หรือบันทึก PDF ก่อนปิดหน้าต่างนี้</span></div>
    <div class="tw" style="max-height:46vh;overflow:auto"><table><thead><tr><th>ที่</th><th>ชื่อ-สกุล</th><th>ตำแหน่ง</th><th>Username</th><th>Password</th></tr></thead><tbody>
    ${g.accounts.map((a,i)=>`<tr><td>${i+1}</td><td>${esc(a.name)}</td><td style="font-size:12px">${esc(a.position)}</td><td><b>${esc(a.username)}</b></td><td style="font-family:monospace;font-size:14px">${esc(a.password)}</td></tr>`).join('')}</tbody></table></div>
    <div class="row" style="margin-top:14px"><button class="btn" onclick="genAccCsv()">⬇️ CSV</button><span class="sp"></span>
-     <button class="btn acc" onclick="genAccPrint()">🖨️ พิมพ์ / บันทึก PDF</button>${MODE==='gas'?'<button class="btn pri" onclick="genAccDrive()">📄 สร้าง PDF เก็บใน Drive</button>':''}<button class="btn" onclick="genAccClose()">ปิด</button></div>`,'900px'); }
+     <button class="btn acc" onclick="genAccPrint()">🖨️ พิมพ์ / บันทึก PDF</button>${MODE==='gas'&&['Admin','Supervisor'].includes(Store.user.role)?'<button class="btn pri" onclick="genAccDrive()">📄 สร้าง PDF เก็บใน Drive</button>':''}<button class="btn" onclick="genAccClose()">ปิด</button></div>`,'900px'); }
 function genAccPrint(){ const w=window.open('','_blank'); if(!w) return SW.err('เบราว์เซอร์บล็อกหน้าต่างใหม่'); w.document.write(genAccHtml()); w.document.close(); setTimeout(()=>w.print(),600); }
 async function genAccDrive(){ const pdf=await busy(()=>htmlToPdfB64(genAccHtml())); const r=await busy(()=>gasCall('apiMakePdf',Store.token,JSON.stringify({pdf,filename:'บัญชีผู้ใช้_'+GENACC.school+'_'+ymd(new Date()),sub:'บัญชีผู้ใช้ (ลับ)'})));
   window.open(r.url,'_blank'); toast('สร้าง PDF ใน Drive แล้ว'); }
