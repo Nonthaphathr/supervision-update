@@ -164,6 +164,39 @@ function me_(token){
   if (!u || u.status!=='active') throw new Error('AUTH_EXPIRED: บัญชีไม่พร้อมใช้งาน');
   return u;
 }
+/* เปลี่ยนชื่อผู้ใช้ (เฉพาะ Admin): ย้ายบัญชี แผน ผลประเมิน การจอง ไปใช้ชื่อใหม่ รหัสผ่านเดิมคงไว้ */
+function apiRenameUser(token, oldUn, newUn){
+  const u = me_(token); need_(u,['Admin']);
+  oldUn = String(oldUn||''); newUn = String(newUn||'').replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
+  if (!/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u.test(newUn)) throw new Error('ชื่อผู้ใช้ใหม่ไม่ถูกต้อง');
+  const lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try{
+    const users = readColl_('Users'), old = users[oldUn];
+    if (!old) throw new Error('ไม่พบผู้ใช้เดิม');
+    if (newUn===oldUn) throw new Error('ชื่อใหม่ซ้ำกับชื่อเดิม');
+    if (Object.keys(users).some(function(k){ return k!==oldUn && k.toLowerCase()===newUn.toLowerCase(); })) throw new Error('ชื่อผู้ใช้นี้มีแล้ว');
+    const uops = [{op:'delete', id:oldUn}, {op:'set', id:newUn, data:Object.assign({}, old, {username:newUn, updated_by:u.username, updated_at:new Date().toISOString()})}];
+    Object.keys(users).forEach(function(k){ if (users[k].linked_user===oldUn) uops.push({op:'merge', id:k, data:{linked_user:newUn}}); });
+    const cnt = {plans:0, evals:0, bookings:0};
+    const lp = readColl_('LessonPlans'), lops = [];
+    Object.keys(lp).forEach(function(k){ if (lp[k].teacher_id===oldUn){ lops.push({op:'merge', id:k, data:{teacher_id:newUn}}); cnt.plans++; } });
+    const ev = readColl_('Evaluations'), eops = [];
+    Object.keys(ev).forEach(function(k){ const x = ev[k], d = {};
+      if (x.teacher_id===oldUn) d.teacher_id = newUn;
+      if (x.evaluator1===oldUn) d.evaluator1 = newUn;
+      if (x.evaluator2===oldUn) d.evaluator2 = newUn;
+      if (x.updated_by===oldUn) d.updated_by = newUn;
+      if ((x.evaluators||[]).indexOf(oldUn)>=0) d.evaluators = x.evaluators.map(function(e){ return e===oldUn?newUn:e; });
+      if (Object.keys(d).length){ eops.push({op:'merge', id:k, data:d}); cnt.evals++; } });
+    const bk = readColl_('Bookings'), bops = [];
+    Object.keys(bk).forEach(function(k){ if (bk[k].teacher_id===oldUn){ bops.push({op:'merge', id:k, data:{teacher_id:newUn}}); cnt.bookings++; } });
+    writeColl_('Users', uops);
+    if (lops.length) writeColl_('LessonPlans', lops);
+    if (eops.length) writeColl_('Evaluations', eops);
+    if (bops.length) writeColl_('Bookings', bops);
+    return JSON.stringify({ok:true, plans:cnt.plans, evals:cnt.evals, bookings:cnt.bookings});
+  } finally { lock.releaseLock(); }
+}
 function need_(u, roles){ if (roles.indexOf(u.role)<0) throw new Error('ไม่มีสิทธิ์ทำรายการนี้'); }
 function publicUser_(u){ const c = Object.assign({}, u); delete c.pass; return c; }
 

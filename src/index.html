@@ -340,9 +340,13 @@ const SW = {
   err:(t,x)=>window.Swal?Swal.fire({icon:'error',title:t,text:x||'',confirmButtonColor:getCss('--p')}):alert(t+'\n'+(x||'')),
   confirm:async(t,x)=>window.Swal?(await Swal.fire({icon:'question',title:t,text:x||'',showCancelButton:true,confirmButtonText:'ยืนยัน',cancelButtonText:'ยกเลิก',confirmButtonColor:getCss('--p')})).isConfirmed:confirm(t)
 };
+/* ชื่อผู้ใช้: ตัดช่องว่าง/อักขระล่องหน (มักติดมากับไฟล์ Excel) ออก และตรวจว่ามีเฉพาะตัวอักษร ตัวเลข . _ @ - */
+const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
+const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.2';
+const APP_VERSION = '1.3.3';
 const APP_CHANGELOG = [
+  {v:'1.3.3', d:'9 พ.ย. 2569', n:['แอดมินระบบเปลี่ยนชื่อผู้ใช้ของคนเดิมได้ (ปุ่ม “เปลี่ยนชื่อผู้ใช้” ในหน้าแก้ไข) ระบบย้ายแผน ผลประเมิน การจอง ให้ตามอัตโนมัติ รหัสผ่านเดิมยังใช้ได้','ตรวจชื่อผู้ใช้ตอนเพิ่มและนำเข้า .xlsx: ตัดช่องว่าง/อักขระล่องหนออก และเตือนถ้ามีสัญลักษณ์แปลก (แสดง ⚠️ ในรายชื่อ)']},
   {v:'1.3.2', d:'9 พ.ย. 2569', n:['เพิ่ม/แก้ไขผู้ใช้ที่หน้าจัดการผู้ใช้แล้วตั้งรหัสผ่านเอง จะมีหน้าต่างให้พิมพ์ ดาวน์โหลด CSV หรือสร้าง PDF เก็บในโฟลเดอร์ “บัญชีผู้ใช้ (ลับ)” ใน Drive']},
   {v:'1.3.1', d:'8 พ.ย. 2569', n:['ซ่อนช่องอัปโหลดแล้ว ผู้นิเทศยังเปิดดูไฟล์ที่ครูแนบไว้แล้วได้','ช่องอัปโหลดที่เพิ่มใหม่ แสดงในหน้าประเมินให้อัตโนมัติ','ลบช่องอัปโหลด: ไฟล์ของช่องนั้นย้ายลงถังขยะ Drive และ CSV แสดงชื่อช่องแทนรหัส','แก้ผลประเมินเก่า ใช้ตัวเลือกที่บันทึกไว้กับผลประเมินนั้น','เกียรติบัตร: ผู้ลงนามคนที่ 2 ค่าเริ่มต้นเป็น นางสาวธันร์ญพรน์ ไชยพรรค หัวหน้ากลุ่มงานนิเทศการศึกษา']},
   {v:'1.3', d:'8 พ.ย. 2569', n:['แอดมินระบบเพิ่ม ซ่อน หรือแสดงช่องอัปโหลดไฟล์ฝั่งครูได้เอง (ค่าเริ่มต้น 2 ช่อง: แผนฯ และบันทึกหลังสอน) ที่ ตั้งค่า → ช่องอัปโหลดฝั่งครู','ผู้นิเทศเลือกเปิดดูไฟล์อื่นของครูนอกจากแผนฯ ได้ในหน้าประเมิน']},
@@ -1279,7 +1283,7 @@ VIEWS.users = ()=>{ const all=users().filter(u=>(Store.user.role!=='SchoolAdmin'
    <div class="card glass reveal"><div class="row" style="margin-bottom:8px"><b>${all.length} คน</b><span class="sp"></span>
      <button class="btn sm" ${UPG<=0?'disabled':''} onclick="UPG--;render()">‹ ก่อนหน้า</button><span class="muted">หน้า ${UPG+1}/${pages}</span><button class="btn sm" ${UPG>=pages-1?'disabled':''} onclick="UPG++;render()">ถัดไป ›</button></div>
    <div class="tw"><table><thead><tr><th>ชื่อผู้ใช้</th><th>ชื่อ-สกุล</th><th>บทบาท</th><th>ตำแหน่ง/วิทยฐานะ</th><th>กลุ่มสาระ</th><th>โรงเรียน</th><th>สถานะ</th><th></th></tr></thead><tbody>
-   ${U.map(u=>`<tr><td>${esc(u.username)}</td><td><b>${esc(u.name)}</b></td><td><span class="badge ${u.role==='Admin'?'':u.role==='Supervisor'?'y':u.role==='Teacher'?'g':'s'}">${roleTh(u.role)}</span></td>
+   ${U.map(u=>`<tr><td>${esc(u.username)}${UN_OK.test(u.username)?'':' <span title="ชื่อผู้ใช้มีอักขระแปลก กดแก้ไขแล้วเปลี่ยนชื่อผู้ใช้">⚠️</span>'}</td><td><b>${esc(u.name)}</b></td><td><span class="badge ${u.role==='Admin'?'':u.role==='Supervisor'?'y':u.role==='Teacher'?'g':'s'}">${roleTh(u.role)}</span></td>
      <td style="font-size:12px">${esc(u.position||'-')}${u.rank?'<br>'+esc(u.rank):''}</td><td>${esc(u.group||'-')}</td>
      <td style="font-size:12px">${u.role==='Supervisor'?((u.schools||[]).length?esc(u.schools.length+' โรงเรียน'):'ทุกโรงเรียน'):esc(u.school||'-')}</td>
      <td>${u.status==='active'?'<span class="badge g">ใช้งาน</span>':'<span class="badge r">ระงับ</span>'}</td>
@@ -1293,6 +1297,7 @@ function userForm(id){ const SA=Store.user.role==='SchoolAdmin'; const u=id?Stor
   const ss=u.schools||[];
   openModal(`<h3 style="margin-bottom:14px">${id?'แก้ไขผู้ใช้':'เพิ่มผู้ใช้'}</h3><div class="grid g2">
    <label class="f">ชื่อผู้ใช้ (username)<input id="u_un" value="${esc(u.username||'')}" ${id?'disabled':''}></label>
+   ${id&&Store.user.role==='Admin'&&MODE==='gas'?`<div style="margin:-6px 0 10px"><button class="btn sm" onclick="renameUserUi('${esc(id)}')">✏️ เปลี่ยนชื่อผู้ใช้</button>${UN_OK.test(id)?'':' <span class="badge r">⚠️ ชื่อผู้ใช้นี้มีอักขระแปลก</span>'}</div>`:''}
    <label class="f">รหัสผ่าน ${id?'(เว้นว่าง = ไม่เปลี่ยน)':''}<input id="u_pw" type="password"></label>
    <label class="f">ชื่อ-สกุล<input id="u_name" value="${esc(u.name||'')}"></label>
    <label class="f">บทบาท<select id="u_role" onchange="$('#u_sup').style.display=this.value==='Supervisor'?'':'none'">${opt(roleOpts,u.role)}</select></label>
@@ -1306,8 +1311,9 @@ function userForm(id){ const SA=Store.user.role==='SchoolAdmin'; const u=id?Stor
      <div class="grid g3" style="max-height:240px;overflow:auto;margin-top:8px;font-size:13px">${schools().map(x=>`<label class="row" style="gap:6px"><input type="checkbox" class="u_sc" value="${esc(x)}" ${ss.includes(x)?'checked':''} style="width:auto">${esc(x)}</label>`).join('')}</div></div>
    <div class="row" style="margin-top:16px"><span class="sp"></span><button class="btn" onclick="closeModal()">ยกเลิก</button><button class="btn pri" onclick="saveUser(${id?'true':'false'})">บันทึก</button></div>`,'820px'); }
 async function saveUser(edit){
-  const un=val('u_un').replace(/\s/g,''), pw=$('#u_pw').value;
+  const un=cleanUn(val('u_un')), pw=$('#u_pw').value;
   if(!un||!val('u_name')) return SW.err('กรอกชื่อผู้ใช้และชื่อ-สกุล');
+  if(!edit && !UN_OK.test(un)) return SW.err('ชื่อผู้ใช้ไม่ถูกต้อง','ใช้ได้เฉพาะตัวอักษร ตัวเลข และเครื่องหมาย . _ @ - (ไม่เกิน 40 ตัว) ไม่มีช่องว่าง');
   if(!edit && Store.data.Users[un]) return SW.err('ชื่อผู้ใช้นี้มีแล้ว');
   if(!edit){ const sc=val('u_school')||(Store.user.role==='SchoolAdmin'?Store.user.school:''), nm=normName(val('u_name')), rl=val('u_role');
     const dup=users().find(x=>normName(x.name)===nm&&(rl==='Supervisor'?x.role==='Supervisor':(x.school===sc&&['Teacher','User'].includes(x.role))));
@@ -1319,6 +1325,13 @@ async function saveUser(edit){
   await busy(()=>commit([{c:'Users',op:edit?'merge':'set',id:un,data:Object.assign(edit?{}:{signature_url:''},d)}])); closeModal(); render(); toast('บันทึกผู้ใช้แล้ว');
   if(pw){ GENACC={school:d.school||'(ไม่ระบุโรงเรียน)',at:new Date(),accounts:[{name:d.name,position:d.position||'',rank:d.rank||'',username:un,password:pw}]}; showGenAcc(); }
 }
+async function renameUserUi(id){
+  const r=await Swal.fire({title:'เปลี่ยนชื่อผู้ใช้',html:`<div style="font-size:14px;margin-bottom:8px">ชื่อเดิม: <b>${esc(id)}</b><br>ระบบจะย้ายแผนการสอน ผลประเมิน และการจองของคนนี้ไปใช้ชื่อใหม่ รหัสผ่านเดิมยังใช้ได้ (ผู้ใช้ต้องเข้าสู่ระบบใหม่)</div>`,input:'text',inputValue:cleanUn(id).replace(/[^\p{L}\p{M}\p{N}._@\-]/gu,''),inputPlaceholder:'ชื่อผู้ใช้ใหม่',showCancelButton:true,confirmButtonText:'เปลี่ยนชื่อ',cancelButtonText:'ยกเลิก',confirmButtonColor:getCss('--p')});
+  if(!r.isConfirmed) return; const nu=cleanUn(r.value);
+  if(!UN_OK.test(nu)) return SW.err('ชื่อผู้ใช้ไม่ถูกต้อง','ใช้ได้เฉพาะตัวอักษร ตัวเลข และเครื่องหมาย . _ @ - (ไม่เกิน 40 ตัว)');
+  if(nu===id) return SW.err('ชื่อใหม่ซ้ำกับชื่อเดิม');
+  if(Object.keys(Store.data.Users).some(k=>k.toLowerCase()===nu.toLowerCase())) return SW.err('ชื่อผู้ใช้นี้มีแล้ว');
+  try{ const x=await busy(()=>gasCall('apiRenameUser',Store.token,id,nu)); closeModal(); await refreshData(); SW.ok('เปลี่ยนชื่อผู้ใช้แล้ว',`ย้ายข้อมูลให้ตาม: แผน ${x.plans} · ผลประเมิน ${x.evals} · การจอง ${x.bookings}`); }catch(e){ SW.err('เปลี่ยนชื่อไม่สำเร็จ',e.message||String(e)); } }
 async function toggleUser(id){ const u=Store.data.Users[id]; await busy(()=>commit([{c:'Users',op:'merge',id,data:{status:u.status==='active'?'suspended':'active'}}])); render(); }
 /* ---------- ข้อมูลโรงเรียน & นำเข้า .xlsx ---------- */
 let MDT='schools', IMP=null;
@@ -1556,9 +1569,9 @@ async function readXlsx(file){
       if(u.school&&!known.has(u.school)) warn.push(`${sheet} แถว ${row}: ไม่พบโรงเรียน "${u.school}"`);
       (u.schools||[]).forEach(x=>{ if(!known.has(x)) warn.push(`${sheet} แถว ${row}: ไม่พบโรงเรียน "${x}"`); });
       seen[u.username]=u; };
-    (P||[]).forEach((r,i)=>add({username:cellOf(r,'username'),password:cellOf(r,'รหัสผ่าน'),name:cellOf(r,'ชื่อ-สกุล'),position:cellOf(r,'ตำแหน่ง')||'ศึกษานิเทศก์',rank:cellOf(r,'วิทยฐานะ'),
+    (P||[]).forEach((r,i)=>add({username:cleanUn(cellOf(r,'username')),password:cellOf(r,'รหัสผ่าน'),name:cellOf(r,'ชื่อ-สกุล'),position:cellOf(r,'ตำแหน่ง')||'ศึกษานิเทศก์',rank:cellOf(r,'วิทยฐานะ'),
       role:cellOf(r,'บทบาท')?roleOfRow(cellOf(r,'บทบาท'),''):'Supervisor',school:'',schools:cellOf(r,'โรงเรียนที่รับผิดชอบ').split(/[,，\n]/).map(x=>x.trim()).filter(Boolean),status:'active'},'ศน.',i+2));
-    (T||[]).forEach((r,i)=>add({username:cellOf(r,'username'),password:cellOf(r,'รหัสผ่าน'),name:cellOf(r,'ชื่อ-สกุล'),position:cellOf(r,'ตำแหน่ง'),rank:cellOf(r,'วิทยฐานะ'),
+    (T||[]).forEach((r,i)=>add({username:cleanUn(cellOf(r,'username')),password:cellOf(r,'รหัสผ่าน'),name:cellOf(r,'ชื่อ-สกุล'),position:cellOf(r,'ตำแหน่ง'),rank:cellOf(r,'วิทยฐานะ'),
       group:cellOf(r,'กลุ่มสาระ'),school:cellOf(r,'ชื่อโรงเรียน'),role:roleOfRow(cellOf(r,'บทบาท'),cellOf(r,'ตำแหน่ง')),status:({'ใช้งาน':'active','ระงับ':'suspended'})[cellOf(r,'สถานะ')]||cellOf(r,'สถานะ')||'active'},'ครูและบุคลากร',i+2));
     Object.values(seen).forEach(u=>usersIn.push(u));
     const exist=usersIn.filter(u=>Store.data.Users[u.username]).length;
