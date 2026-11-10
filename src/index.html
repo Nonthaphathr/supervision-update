@@ -349,8 +349,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.9';
+const APP_VERSION = '1.3.10';
 const APP_CHANGELOG = [
+  {v:'1.3.10', d:'10 พ.ย. 2569', n:['แก้ PDF เนื้อหาเลื่อนไปติดขอบซ้ายจนข้อมูลขาด','ส่วนภาพประกอบที่ไม่ได้อัปโหลดรูป จะไม่แสดงกรอบว่างในเอกสารแล้ว (ถ้าไม่มีรูปเลย ตัดหัวข้อภาพประกอบออก)']},
   {v:'1.3.9', d:'10 พ.ย. 2569', n:['แก้ PDF: เนื้อหาเลื่อนลง/ตัดหน้ากลางแถว/หน้าแรกว่าง และขอบขวาตารางขาด (เกิดเมื่อเลื่อนหน้าจอลงก่อนกดสร้าง PDF)']},
   {v:'1.3.8', d:'10 พ.ย. 2569', n:['เพิ่มปุ่ม “ทดสอบสร้าง PDF (ข้อมูลจำลอง)” ในตั้งค่า > ตัวอย่างเอกสาร','แก้เอกสาร PDF: ข้อความภาษาไทยหลายบรรทัดไม่ซ้อนทับ/หายแล้ว และตัดหน้าไม่ผ่ากลางแถวตาราง','รอฟอนต์และรูปโหลดครบก่อนสร้าง PDF ถ้าสร้างไม่สมบูรณ์จะแจ้งให้กดใหม่ แทนการบันทึกไฟล์ที่ขาดหาย','กดสร้าง PDF ซ้ำ จะแทนที่ไฟล์เดิมใน Drive (ไฟล์เก่าย้ายไปถังขยะ)']},
   {v:'1.3.7', d:'9 พ.ย. 2569', n:['ก่อนปิดหน้าต่างแสดงรหัสผ่านผู้ใช้ มีปุ่มสีเขียวกระพริบ “บันทึกรหัสเข้า Drive” ชวนกดเก็บรหัสไว้ก่อนปิด (แอดมินระบบ/ศน.)']},
@@ -791,7 +792,7 @@ function reportHtml(e,opt){ opt=opt||{};
   ${opt.full?`<div class="pbav"><table style="margin-top:8px"><tr><th style="text-align:left">สรุปผลรายด้าน</th><th style="width:90px">ร้อยละ</th><th style="width:110px">ระดับคุณภาพ</th></tr>${catPct(e).map(c=>`<tr><td>${esc(c.name)}</td><td style="text-align:center">${c.pct==null?'-':c.pct.toFixed(2)}</td><td style="text-align:center">${c.pct==null?'-':esc(gradeOf(c.pct))}</td></tr>`).join('')}</table></div>`:''}
   <p><b>ข้อเสนอแนะ:</b> ${esc(e.comment||'-')}</p>
   ${files.length?`<p><b>ไฟล์แนบ:</b> ${files.map((u,i)=>`<a href="${esc(u)}">ไฟล์แนบที่ ${i+1}</a>`).join(' · ')}</p>`:''}
-  ${opt.full&&(nSlot>0||photos.length)?`<div class="pbav"><div style="font-weight:bold;margin:6px 0 4px">ภาพประกอบการนิเทศ</div><div style="display:flex;gap:10px;flex-wrap:wrap">${Array.from({length:Math.max(nSlot,photos.length)},(_,i)=>i).map(i=>photos[i]?`<img src="${esc(driveImageUrl(photos[i],800))}" style="width:${nSlot>2?'24%':'49%'};height:${ph}px;object-fit:cover;border-radius:6px">`:`<div style="width:${nSlot>2?'24%':'49%'};height:${ph}px;border:2px dashed #FDBA74;border-radius:6px;background:#FFF7ED;color:#9A3412;display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px"><div>ภาพประกอบที่ ${i+1}<br>(ยังไม่มีภาพอัปโหลด)</div></div>`).join('')}</div></div>`
+  ${opt.full&&photos.length?`<div class="pbav"><div style="font-weight:bold;margin:6px 0 4px">ภาพประกอบการนิเทศ</div><div style="display:flex;gap:10px;flex-wrap:wrap">${photos.map((_,i)=>`<img src="${esc(driveImageUrl(photos[i],800))}" style="width:${nSlot>2?'24%':'49%'};height:${ph}px;object-fit:cover;border-radius:6px">`).join('')}</div></div>`
    :(photos.length?`<div style="display:flex;gap:10px;flex-wrap:wrap">${photos.map(p=>`<img src="${esc(driveImageUrl(p,800))}" style="width:48%;height:${ph}px;object-fit:cover;border-radius:6px">`).join('')}</div>`:'')}
   <div style="display:flex;justify-content:space-around;margin-top:${fit?12:30}px;page-break-inside:avoid">${sig}</div>
   <p style="text-align:right;font-size:10px;color:#888;margin-top:${fit?6:20}px">สร้างโดย${esc(APP_TITLE())}</p></body></html>`;
@@ -821,7 +822,7 @@ async function htmlToPdfB64(html){
   const SX=window.scrollX, SY=window.scrollY; window.scrollTo(0,0);
   try{
   try{ await document.fonts.ready; }catch(err){}
-  const wk=html2pdf().set({margin:[8,10,8,10],image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:1200},
+  const wk=html2pdf().set({margin:[8,10,8,10],image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:document.documentElement.clientWidth,windowHeight:document.documentElement.clientHeight},
     jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:[],before:[],after:[],avoid:[]}}).from(box);
   await wk.toContainer();
   try{ await document.fonts.ready; }catch(err){}
