@@ -351,7 +351,7 @@ const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
 const APP_VERSION = '1.3.11';
 const APP_CHANGELOG = [
-  {v:'1.3.11', d:'10 พ.ย. 2569', n:['เอกสาร PDF: ตารางที่ต่อไปหน้าถัดไป จะมีหัวตารางซ้ำที่ต้นหน้าให้อัตโนมัติ']},
+  {v:'1.3.11', d:'10 พ.ย. 2569', n:['เอกสาร PDF: ตารางที่ต่อไปหน้าถัดไป จะมีหัวตารางซ้ำที่ต้นหน้าให้อัตโนมัติ','เกียรติบัตร PDF: แก้ภาพเลื่อน/ขอบขาดเมื่อเลื่อนหน้าจอ และรอรูปพื้นหลัง/ลายเซ็นโหลดครบก่อนสร้าง']},
   {v:'1.3.10', d:'10 พ.ย. 2569', n:['แก้ PDF เนื้อหาเลื่อนไปติดขอบซ้ายจนข้อมูลขาด','ส่วนภาพประกอบที่ไม่ได้อัปโหลดรูป จะไม่แสดงกรอบว่างในเอกสารแล้ว (ถ้าไม่มีรูปเลย ตัดหัวข้อภาพประกอบออก)']},
   {v:'1.3.9', d:'10 พ.ย. 2569', n:['แก้ PDF: เนื้อหาเลื่อนลง/ตัดหน้ากลางแถว/หน้าแรกว่าง และขอบขวาตารางขาด (เกิดเมื่อเลื่อนหน้าจอลงก่อนกดสร้าง PDF)']},
   {v:'1.3.8', d:'10 พ.ย. 2569', n:['เพิ่มปุ่ม “ทดสอบสร้าง PDF (ข้อมูลจำลอง)” ในตั้งค่า > ตัวอย่างเอกสาร','แก้เอกสาร PDF: ข้อความภาษาไทยหลายบรรทัดไม่ซ้อนทับ/หายแล้ว และตัดหน้าไม่ผ่ากลางแถวตาราง','รอฟอนต์และรูปโหลดครบก่อนสร้าง PDF ถ้าสร้างไม่สมบูรณ์จะแจ้งให้กดใหม่ แทนการบันทึกไฟล์ที่ขาดหาย','กดสร้าง PDF ซ้ำ จะแทนที่ไฟล์เดิมใน Drive (ไฟล์เก่าย้ายไปถังขยะ)']},
@@ -2075,10 +2075,12 @@ function certTog(gi,ri){ const r=CERT_G[gi].ok[ri]; if(r){ if(CERT.off[r.id]) de
 /* ---- สร้าง PDF A4 แนวนอน ---- */
 async function certCanvas(html){ await loadScript(H2P_URL);
   const wrap=document.createElement('div'), box=document.createElement('div'); wrap.style.cssText='position:fixed;left:-99999px;top:0;width:1123px;height:794px';
-  box.style.cssText='width:1123px;height:794px;background:#ffffff'; box.innerHTML=html; wrap.appendChild(box); document.body.appendChild(wrap);
+  box.style.cssText='width:1123px;height:794px;background:#ffffff'; box.innerHTML=html; thaiBreaks(box); wrap.appendChild(box); document.body.appendChild(wrap);
+  const SX=window.scrollX, SY=window.scrollY; window.scrollTo(0,0);
   try{ try{ await document.fonts.ready; }catch(err){}
-    const wk=html2pdf().set({margin:0,image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'}}).from(box);
-    const cv=await wk.toCanvas().get('canvas'); return {wk,cv}; } finally{ wrap.remove(); } }
+    const wk=html2pdf().set({margin:0,image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:document.documentElement.clientWidth,windowHeight:document.documentElement.clientHeight},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'}}).from(box);
+    await wk.toContainer(); await Promise.all([...wk.prop.container.querySelectorAll('img')].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;})));
+    const cv=await wk.toCanvas().get('canvas'); return {wk,cv}; } finally{ wrap.remove(); window.scrollTo(SX,SY); } }
 async function certPdf(htmls,onP){ let doc=null, N0=0;
   for(let i=0;i<htmls.length;i++){ const {wk,cv}=await certCanvas(htmls[i]);
     if(!doc){ doc=await wk.toPdf().get('pdf'); N0=doc.internal.getNumberOfPages(); }
