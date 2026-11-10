@@ -349,8 +349,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.10';
+const APP_VERSION = '1.3.11';
 const APP_CHANGELOG = [
+  {v:'1.3.11', d:'10 พ.ย. 2569', n:['เอกสาร PDF: ตารางที่ต่อไปหน้าถัดไป จะมีหัวตารางซ้ำที่ต้นหน้าให้อัตโนมัติ']},
   {v:'1.3.10', d:'10 พ.ย. 2569', n:['แก้ PDF เนื้อหาเลื่อนไปติดขอบซ้ายจนข้อมูลขาด','ส่วนภาพประกอบที่ไม่ได้อัปโหลดรูป จะไม่แสดงกรอบว่างในเอกสารแล้ว (ถ้าไม่มีรูปเลย ตัดหัวข้อภาพประกอบออก)']},
   {v:'1.3.9', d:'10 พ.ย. 2569', n:['แก้ PDF: เนื้อหาเลื่อนลง/ตัดหน้ากลางแถว/หน้าแรกว่าง และขอบขวาตารางขาด (เกิดเมื่อเลื่อนหน้าจอลงก่อนกดสร้าง PDF)']},
   {v:'1.3.8', d:'10 พ.ย. 2569', n:['เพิ่มปุ่ม “ทดสอบสร้าง PDF (ข้อมูลจำลอง)” ในตั้งค่า > ตัวอย่างเอกสาร','แก้เอกสาร PDF: ข้อความภาษาไทยหลายบรรทัดไม่ซ้อนทับ/หายแล้ว และตัดหน้าไม่ผ่ากลางแถวตาราง','รอฟอนต์และรูปโหลดครบก่อนสร้าง PDF ถ้าสร้างไม่สมบูรณ์จะแจ้งให้กดใหม่ แทนการบันทึกไฟล์ที่ขาดหาย','กดสร้าง PDF ซ้ำ จะแทนที่ไฟล์เดิมใน Drive (ไฟล์เก่าย้ายไปถังขยะ)']},
@@ -833,17 +834,24 @@ async function htmlToPdfB64(html){
     if(/always|page/.test(cs.breakBefore+' '+cs.pageBreakBefore)) fb.push(t);
     if(el.tagName==='TR'&&el.querySelector('td[colspan]')) cat.push([t,b]);
     if(r.height>0&&r.height<PH*0.9&&(el.tagName==='TR'||el.tagName==='IMG'||el.classList.contains('sum')||/avoid/.test(cs.breakInside+' '+cs.pageBreakInside))) at.push([t,b]); });
+  /* หัวตารางซ้ำเมื่อตารางต่อหน้า: เก็บตำแหน่งแถวหัว (th) ของแต่ละตาราง */
+  const TB=[...cont.querySelectorAll('table')].map(tb=>{ const hr=[...tb.rows].find(r=>r.cells.length&&[...r.cells].every(c=>c.tagName==='TH')); if(!hr||hr!==tb.rows[0]) return null;
+    const a=tb.getBoundingClientRect(), h=hr.getBoundingClientRect(); return {ht:h.top-R.top,hb:h.bottom-R.top,bot:a.bottom-R.top}; }).filter(x=>x&&x.hb-x.ht<PH*0.2);
   const total=Math.ceil(R.height), cuts=[]; let s=0;
-  while(s<total-2){ let lim=s+PH; const f=fb.filter(t=>t>s+5&&t<lim);
+  while(s<total-2){ const T=TB.find(t=>t.hb<=s+1&&t.bot>s+5), hh=T?T.hb-T.ht:0;
+    let lim=s+PH-hh; const f=fb.filter(t=>t>s+5&&t<lim);
     if(f.length) lim=Math.min(...f);
     else if(lim<total){ const st=at.filter(x=>x[0]>s+5&&x[0]<lim&&x[1]>lim); if(st.length) lim=Math.min(...st.map(x=>x[0]));
       const c=cat.filter(x=>x[0]>s+5&&x[1]<=lim+1&&x[1]>=lim-3); if(c.length) lim=c[0][0]; }
-    lim=Math.min(Math.floor(lim),total); cuts.push([s,lim]); s=lim; }
+    lim=Math.min(Math.floor(lim),total); cuts.push([s,lim,T]); s=lim; }
   const cv=await wk.toCanvas().get('canvas'), doc=await wk.toPdf().get('pdf'), k=cv.height/total, N0=doc.internal.getNumberOfPages();
   if(!cv.height||Math.abs(cv.height/total-cv.width/CW)/(cv.width/CW)>0.03) throw new Error('สร้าง PDF ไม่สมบูรณ์ (ภาพไม่ตรงขนาด) กรุณากดใหม่อีกครั้ง');
-  cuts.forEach(([a,b])=>{ const c=document.createElement('canvas'); c.width=cv.width; c.height=Math.max(1,Math.round((b-a)*k)); const x=c.getContext('2d');
-    x.fillStyle='#ffffff'; x.fillRect(0,0,c.width,c.height); x.drawImage(cv,0,Math.round(a*k),cv.width,c.height,0,0,cv.width,c.height);
-    doc.addPage(); doc.addImage(c.toDataURL('image/jpeg',0.95),'JPEG',10,8,190,(b-a)*190/CW); });
+  cuts.forEach(([a,b,T])=>{ const hh=T?T.hb-T.ht:0, hp=Math.round(hh*k), bp=Math.round((b-a)*k);
+    const c=document.createElement('canvas'); c.width=cv.width; c.height=Math.max(1,hp+bp); const x=c.getContext('2d');
+    x.fillStyle='#ffffff'; x.fillRect(0,0,c.width,c.height);
+    if(hp) x.drawImage(cv,0,Math.round(T.ht*k),cv.width,hp,0,0,cv.width,hp);
+    x.drawImage(cv,0,Math.round(a*k),cv.width,bp,0,hp,cv.width,bp);
+    doc.addPage(); doc.addImage(c.toDataURL('image/jpeg',0.95),'JPEG',10,8,190,(hh+b-a)*190/CW); });
   for(let i=0;i<N0;i++) doc.deletePage(1);
   return doc.output('datauristring').split(',')[1];
   } finally { window.scrollTo(SX,SY); }
