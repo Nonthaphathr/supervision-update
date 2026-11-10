@@ -705,6 +705,10 @@ function apiMakePdf(token, json){
     }catch(e){ return m; }
   });
   const dir = path_(p.sub||'อื่น ๆ', folder_('รายงาน PDF', p.year ? yearDir_(p.year) : root_()));
+  // สร้างซ้ำ = แทนที่ไฟล์เดิมของการประเมินนี้ (ย้ายไฟล์เก่าไปถังขยะ แล้วใช้ชื่อเดิม)
+  if (p.eval_id){ try{ const ev = (readColl_('Evaluations')||{})[p.eval_id]||{};
+    const oid = (String(ev.pdf_drive_link||'').match(/\/d\/([\w-]{10,})/)||[])[1];
+    if (oid) DriveApp.getFileById(oid).setTrashed(true); }catch(e){} }
   const name = uniq_(dir, (p.filename||'report')+'.pdf');
   const blob = p.pdf ? Utilities.newBlob(Utilities.base64Decode(p.pdf), 'application/pdf', name)
                      : Utilities.newBlob(html, 'text/html', 'r.html').getAs('application/pdf').setName(name);

@@ -349,8 +349,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.7';
+const APP_VERSION = '1.3.8';
 const APP_CHANGELOG = [
+  {v:'1.3.8', d:'10 พ.ย. 2569', n:['เพิ่มปุ่ม “ทดสอบสร้าง PDF (ข้อมูลจำลอง)” ในตั้งค่า > ตัวอย่างเอกสาร','แก้เอกสาร PDF: ข้อความภาษาไทยหลายบรรทัดไม่ซ้อนทับ/หายแล้ว และตัดหน้าไม่ผ่ากลางแถวตาราง','รอฟอนต์และรูปโหลดครบก่อนสร้าง PDF ถ้าสร้างไม่สมบูรณ์จะแจ้งให้กดใหม่ แทนการบันทึกไฟล์ที่ขาดหาย','กดสร้าง PDF ซ้ำ จะแทนที่ไฟล์เดิมใน Drive (ไฟล์เก่าย้ายไปถังขยะ)']},
   {v:'1.3.7', d:'9 พ.ย. 2569', n:['ก่อนปิดหน้าต่างแสดงรหัสผ่านผู้ใช้ มีปุ่มสีเขียวกระพริบ “บันทึกรหัสเข้า Drive” ชวนกดเก็บรหัสไว้ก่อนปิด (แอดมินระบบ/ศน.)']},
   {v:'1.3.6', d:'9 พ.ย. 2569', n:['ครูอัตราจ้าง/ผู้ช่วยครูอัตราจ้าง: ช่องวิทยฐานะเว้นว่าง ไม่แสดงคำว่า “ไม่มีวิทยฐานะ” ในรายงานและเกียรติบัตร']},
   {v:'1.3.5', d:'9 พ.ย. 2569', n:['ช่อง “ตำแหน่ง” ในหน้าจัดการผู้ใช้เลือกได้จากรายการ เพิ่ม “ครูอัตราจ้าง” และ “ผู้ช่วยครูอัตราจ้าง” (เลือกแล้วระบบเว้นวิทยฐานะว่างให้ ไม่แสดงคำว่า “ไม่มีวิทยฐานะ”) ยังพิมพ์ตำแหน่งอื่นเองได้']},
@@ -815,10 +816,14 @@ async function htmlToPdfB64(html){
   const reset='.rp table{border-collapse:collapse;border-spacing:0;font-size:inherit}.rp td,.rp th{white-space:normal;background-color:transparent;color:inherit}.rp th{font-weight:600}.rp td:first-child,.rp td:last-child,.rp th:first-child,.rp th:last-child{border-radius:0}.rp tbody tr,.rp tbody tr:hover{transform:none}';
   box.innerHTML='<style>'+reset+css+'.rp{margin:0!important}</style><div class="rp" style="width:718px;background:#fff">'+d.body.innerHTML+'</div>';
   box.style.cssText='width:718px;background:#fff';
+  thaiBreaks(box);
   try{ await document.fonts.ready; }catch(err){}
   const wk=html2pdf().set({margin:[8,10,8,10],image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
     jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:[],before:[],after:[],avoid:[]}}).from(box);
   await wk.toContainer();
+  try{ await document.fonts.ready; }catch(err){}
+  await Promise.all([...wk.prop.container.querySelectorAll('img')].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;})));
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
   const cont=wk.prop.container, R=cont.getBoundingClientRect(), CW=R.width, PH=Math.floor(CW*281/190), at=[], fb=[], cat=[];
   cont.querySelectorAll('*').forEach(el=>{ const cs=getComputedStyle(el), r=el.getBoundingClientRect(), t=r.top-R.top, b=r.bottom-R.top;
     if(/always|page/.test(cs.breakBefore+' '+cs.pageBreakBefore)) fb.push(t);
@@ -830,13 +835,19 @@ async function htmlToPdfB64(html){
     else if(lim<total){ const st=at.filter(x=>x[0]>s+5&&x[0]<lim&&x[1]>lim); if(st.length) lim=Math.min(...st.map(x=>x[0]));
       const c=cat.filter(x=>x[0]>s+5&&x[1]<=lim+1&&x[1]>=lim-3); if(c.length) lim=c[0][0]; }
     lim=Math.min(Math.floor(lim),total); cuts.push([s,lim]); s=lim; }
-  const cv=await wk.toCanvas().get('canvas'), doc=await wk.toPdf().get('pdf'), k=cv.width/CW, N0=doc.internal.getNumberOfPages();
+  const cv=await wk.toCanvas().get('canvas'), doc=await wk.toPdf().get('pdf'), k=cv.height/total, N0=doc.internal.getNumberOfPages();
+  if(!cv.height||Math.abs(cv.height/total-cv.width/CW)/(cv.width/CW)>0.03) throw new Error('สร้าง PDF ไม่สมบูรณ์ (ภาพไม่ตรงขนาด) กรุณากดใหม่อีกครั้ง');
   cuts.forEach(([a,b])=>{ const c=document.createElement('canvas'); c.width=cv.width; c.height=Math.max(1,Math.round((b-a)*k)); const x=c.getContext('2d');
     x.fillStyle='#ffffff'; x.fillRect(0,0,c.width,c.height); x.drawImage(cv,0,Math.round(a*k),cv.width,c.height,0,0,cv.width,c.height);
     doc.addPage(); doc.addImage(c.toDataURL('image/jpeg',0.95),'JPEG',10,8,190,(b-a)*190/CW); });
   for(let i=0;i<N0;i++) doc.deletePage(1);
   return doc.output('datauristring').split(',')[1];
 }
+/* html2canvas ตัดคำไทยไม่เป็น → ข้อความหลายบรรทัดซ้อนทับ/หาย: แทรก zero-width space ระหว่างคำไทย */
+function thaiBreaks(root){ if(typeof Intl==='undefined'||!Intl.Segmenter) return; const sg=new Intl.Segmenter('th',{granularity:'word'});
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT), L=[]; while(w.nextNode()) L.push(w.currentNode);
+  L.forEach(n=>{ const t=n.nodeValue; if(!/[\u0E00-\u0E7F]/.test(t)||/^(STYLE|SCRIPT)$/.test((n.parentNode||{}).nodeName)) return;
+    n.nodeValue=[...sg.segment(t.replace(/\u200B/g,''))].map(x=>x.segment).join('\u200B'); }); }
 function flattenImgs(html){
   const d=new DOMParser().parseFromString(html,'text/html');
   return Promise.all([...d.images].map(im=>new Promise(res=>{ const i=new Image(); i.crossOrigin='anonymous';
@@ -1787,6 +1798,7 @@ const DOC_LIST=[['A','📝','รายงานผลการนิเทศ �
 let DOCPV=null;
 function docsTab(){ return `<div class="muted" style="margin-bottom:12px">ดูตัวอย่างหน้าตาเอกสารที่ระบบสร้าง ด้วยข้อมูลสมมุติ — ไม่บันทึกข้อมูลใด ๆ ลงระบบ</div>
   <div class="grid g3">${DOC_LIST.map(d=>`<div class="ucard" style="gap:6px"><div style="font-size:26px">${d[1]}</div><b style="font-size:16px;color:var(--ink)">${esc(d[2])}</b><span class="muted" style="font-size:12.5px;min-height:36px">${esc(d[3])}</span><button class="btn sm pri" style="align-self:flex-start" onclick="docPreview('${d[0]}')">👁️ ดูตัวอย่าง</button></div>`).join('')}
+   <div class="ucard" style="gap:6px;border:2px dashed var(--p)"><div style="font-size:26px">🧪</div><b style="font-size:16px;color:var(--ink)">ทดสอบสร้าง PDF (ข้อมูลจำลอง)</b><span class="muted" style="font-size:12.5px;min-height:36px">สร้างเอกสารผลการประเมิน 3 รอบด้วยข้อมูลสมมุติ แล้วเทียบว่าทุกรอบได้ผลเท่ากัน · ไม่บันทึกลงระบบ/Drive</span><button class="btn sm pri" style="align-self:flex-start" onclick="pdfSelfTest()">▶ เริ่มทดสอบ</button></div>
    <div class="ucard" style="gap:6px"><div style="font-size:26px">📊</div><b style="font-size:16px;color:var(--ink)">รายงานสรุปผลการนิเทศ</b><span class="muted" style="font-size:12.5px;min-height:36px">ไฟล์ .xlsx / .docx จากแดชบอร์ด (ใช้ข้อมูลจริงตามตัวกรองแดชบอร์ด รวมการเปรียบเทียบรายโรงเรียน)</span><div class="row" style="gap:6px"><button class="btn sm" onclick="exportDashXlsx()">📗 .xlsx</button><button class="btn sm pri" onclick="exportDashDocx()">📘 .docx</button></div></div></div>`; }
 function sampleEval(t){ const R=rub(t), sc={}; R.cats.forEach((c,ci)=>c.items.forEach((x,ii)=>{ sc[ci+'_'+ii]=[5,4,5,4,3,5][(ci*3+ii)%6]; })); const tot=normalize(t,sc);
   return {eval_id:'SAMPLE_'+t,type:t,teacher_id:'__sample_t',group:'ภาษาไทย',subject:'ท21101 ภาษาไทย',grade_level:'ม.1/1',term:Store.settings.term,year:Store.settings.academic_year,date:ymd(new Date()),school:schools()[0]||'โรงเรียนตัวอย่าง',
@@ -1795,6 +1807,18 @@ async function withSample(fn){ const U=Store.data.Users;
   U.__sample_t={username:'__sample_t',name:'นางสาวตัวอย่าง ใจดี',role:'Teacher',school:schools()[0]||'โรงเรียนตัวอย่าง',position:'ครู',rank:'ชำนาญการ',group:'ภาษาไทย'};
   U.__sample_s={username:'__sample_s',name:'นางศึกษา นิเทศดี',role:'Supervisor',position:'ศึกษานิเทศก์'};
   try{ return await fn(); } finally{ delete U.__sample_t; delete U.__sample_s; } }
+/* ทดสอบ PDF: สร้างซ้ำ 3 รอบ ถ้าขนาดไฟล์/จำนวนหน้าต่างกัน แปลว่ายังมีอาการ render ไม่เสร็จ */
+async function pdfSelfTest(){ const R=[]; let last='';
+  const html=await busy(()=>docHtml('result'));
+  for(let i=1;i<=3;i++){ const t0=performance.now();
+    try{ const b=await busy(()=>htmlToPdfB64(html)); const txt=atob(b); const pages=(txt.match(/\/Type\s*\/Page[^s]/g)||[]).length;
+      R.push({i,ok:true,pages,kb:Math.round(b.length*0.75/1024),ms:Math.round(performance.now()-t0)}); last=b; }
+    catch(err){ R.push({i,ok:false,msg:err.message||String(err),ms:Math.round(performance.now()-t0)}); } }
+  const good=R.filter(r=>r.ok), same=good.length===3&&new Set(good.map(r=>r.pages)).size===1&&Math.max(...good.map(r=>r.kb))-Math.min(...good.map(r=>r.kb))<=Math.max(5,good[0].kb*0.03);
+  const rows=R.map(r=>`<tr><td>รอบ ${r.i}</td><td>${r.ok?'✅':'❌'}</td><td>${r.ok?r.pages+' หน้า':''}</td><td>${r.ok?r.kb+' KB':esc(r.msg)}</td><td>${(r.ms/1000).toFixed(1)} วิ</td></tr>`).join('');
+  const msg=`<table style="width:100%;font-size:13.5px;border-collapse:collapse">${rows}</table><div style="margin-top:12px;text-align:left;font-size:13.5px">${same?'✅ <b>ผ่าน</b> ทั้ง 3 รอบได้ผลเท่ากัน':'⚠️ <b>ไม่ผ่าน</b> ผลแต่ละรอบไม่เท่ากัน (อาจยังมีอาการ render ไม่ครบ)'}<br>ให้เปิดไฟล์ที่ดาวน์โหลดแล้วดูว่า ข้อความในตารางไม่ซ้อนกัน และแถวไม่ถูกตัดครึ่งหน้า</div>`;
+  if(last) saveBlob(new Blob([b64ToBytes(last)],{type:'application/pdf'}),'ทดสอบ_เอกสารผลการประเมิน_'+ymd(new Date())+'.pdf');
+  if(window.Swal) Swal.fire({title:'ผลทดสอบสร้าง PDF',html:msg,icon:same?'success':'warning',confirmButtonText:'ปิด',confirmButtonColor:getCss('--p')}); else alert(same?'ผ่าน':'ไม่ผ่าน'); }
 async function docHtml(k){ return withSample(async()=>{
   if(['A','B','C'].includes(k)) return reportHtml(sampleEval(k));
   if(k==='result') return teacherDocHtml(['A','B','C'].map(sampleEval));
