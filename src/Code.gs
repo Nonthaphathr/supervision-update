@@ -16,6 +16,7 @@ function doGet(e){
   const boot = { settings: getSettings_(), url: ScriptApp.getService().getUrl(), portal: String((e&&e.parameter&&e.parameter.p)||'').replace(/[^a-z]/g,''), original: isOriginal_() };
   const sk = String((e&&e.parameter&&e.parameter.s)||'').replace(/[^A-Za-z0-9]/g,'');   /* ลิงก์ประเมินความพึงพอใจ (ไม่ต้องล็อกอิน) */
   if (sk){ boot.survey = sk; boot.schools = Object.values(readColl_('Schools')).map(x=>x.name).filter(Boolean); }
+  try{ boot.logo_src = String(((boot.settings||{}).school_info||{}).logo||''); boot.logo_data = logoData_(boot.logo_src); }catch(err){}
   t.boot = JSON.stringify(boot).replace(/</g,'\\u003c');
   return t.evaluate()
     .setTitle(APP_NAME)
@@ -690,6 +691,18 @@ function apiDeleteFiles(token, idsJson){
   const done=[]; JSON.parse(idsJson).forEach(id=>{ try{ DriveApp.getFileById(id).setTrashed(true); done.push(id);}catch(e){} });
   return JSON.stringify({ok:true, deleted:done});
 }
+
+/* โลโก้: ส่งไฟล์ต้นฉบับเป็น data URL (คงพื้นโปร่งใสของ PNG ไม่ติดพื้นดำจากภาพย่อ) */
+function logoData_(src){
+  try{ const l = String(src || (getSettings_().school_info||{}).logo || '');
+    const id = (l.match(/\/d\/([\w-]{10,})/) || l.match(/[?&]id=([\w-]{10,})/) || [])[1];
+    if (!id) return '';
+    const b = DriveApp.getFileById(id).getBlob(), by = b.getBytes();
+    if (by.length > 700000) return '';
+    return 'data:' + b.getContentType() + ';base64,' + Utilities.base64Encode(by);
+  }catch(e){ return ''; }
+}
+function apiLogoData(token){ me_(token); return JSON.stringify({ok:true, data:logoData_('')}); }
 
 /* ---------------- PDF report (HTML -> PDF in Drive) ---------------- */
 // html สร้างจากหน้าเว็บ (มีตรา/ลายเซ็นเป็น URL) → แปลงรูปเป็น base64 ฝั่งเซิร์ฟเวอร์เพื่อให้ติดใน PDF
