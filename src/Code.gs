@@ -572,8 +572,8 @@ function updApi_(method, path, body){
   if (body){ o.contentType = 'application/json'; o.payload = JSON.stringify(body); }
   const r = UrlFetchApp.fetch(UPD_API+path, o), c = r.getResponseCode(), t = r.getContentText();
   if (c>=300){ let m = t; try{ m = JSON.parse(t).error.message; }catch(e){}
-    if (/Apps Script API|has not enabled|not been used/i.test(m)) throw new Error('UPD_API_OFF');
-    if (c===403 || /scope|insufficient|PERMISSION/i.test(m)) throw new Error('UPD_SCOPE');
+    if (/Apps Script API|has not enabled|not been used/i.test(m)) throw new Error('UPD_API_OFF::'+c+' '+m);
+    if (c===401 || c===403 || /scope|insufficient|PERMISSION/i.test(m)) throw new Error('UPD_SCOPE::'+c+' '+m);
     throw new Error('Apps Script API '+c+': '+m); }
   return t ? JSON.parse(t) : {};
 }
@@ -611,9 +611,9 @@ function selfUpdate_(){
     return {ok:true, version:v.version, deployed:true, deployVersion:ver.versionNumber};
   } finally { lock.releaseLock(); }
 }
-function updErrText_(e){ const m = String(e && e.message || e);
-  if (m==='UPD_API_OFF') return 'ยังไม่ได้เปิด Google Apps Script API — เปิดที่ '+UPD_SETTINGS_URL+' (ทำครั้งเดียว) แล้วกดอัปเดตอีกครั้ง';
-  if (m==='UPD_SCOPE') return 'โปรเจกต์ยังไม่ได้รับสิทธิ์จัดการโค้ด/การเผยแพร่ — ให้เจ้าของวาง appsscript.json จากศูนย์อัปเดต แล้วกดอนุญาตสิทธิ์ (ทำครั้งเดียว)';
+function updErrText_(e){ const m = String(e && e.message || e), k = m.split('::')[0], d = m.split('::')[1] || '';
+  if (k==='UPD_API_OFF') return 'ยังไม่ได้เปิด Google Apps Script API — เปิดที่ '+UPD_SETTINGS_URL+' (ทำครั้งเดียว) แล้วกดอัปเดตอีกครั้ง'+(d?' [รายละเอียด: '+d+']':'');
+  if (k==='UPD_SCOPE') return 'ยังไม่ได้อนุญาตสิทธิ์ใหม่ — ให้เจ้าของเปิด Google Sheet ของระบบ › เมนู 🧭 ระบบนิเทศ › 🔄 อัปเดตระบบ แล้วกด "อนุญาต" ตามที่ Google ถาม (ทำครั้งเดียว)'+(d?' [รายละเอียด: '+d+']':'');
   return m; }
 function apiUpdateInfo(token){ need_(me_(token),['Admin']); const v = updLatest_();
   return JSON.stringify({ok:true, latest:v.version, date:v.date||'', notes:v.notes||[], current:updCurrentVersion_(), newer:updNewer_(v.version, updCurrentVersion_()), warn:deployWarn_()}); }
@@ -629,7 +629,7 @@ function menuSelfUpdate(){
   try{ const r = selfUpdate_();
     ui.alert('อัปเดตเรียบร้อย ✅', 'ระบบเป็นเวอร์ชัน '+r.version+(r.deployed?' และเผยแพร่บนลิงก์เดิมแล้ว\nผู้ใช้กดรีเฟรชหน้าเว็บก็จะได้เวอร์ชันใหม่':'\n'+(r.msg||'')), ui.ButtonSet.OK);
   }catch(e){ const t = updErrText_(e);
-    if (String(e.message)==='UPD_API_OFF'){
+    if (String(e.message).indexOf('UPD_API_OFF')===0){
       const h = '<div style="font-family:Sarabun,Tahoma,sans-serif;font-size:14px;line-height:1.7">'
         + '<p style="margin-top:0">ต้องเปิด <b>Google Apps Script API</b> ก่อน (ทำครั้งเดียว)</p><ol style="padding-left:20px">'
         + '<li>กดปุ่มด้านล่าง (เปิดแท็บใหม่)</li><li>เปิดสวิตช์ <b>Google Apps Script API</b> ให้เป็น <b>เปิด</b></li><li>กลับมาที่ชีตนี้ แล้วกดเมนู 🔄 อัปเดตระบบ อีกครั้ง</li></ol>'
