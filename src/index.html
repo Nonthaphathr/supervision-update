@@ -349,8 +349,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.13';
+const APP_VERSION = '1.3.14';
 const APP_CHANGELOG = [
+  {v:'1.3.14', d:'12 พ.ย. 2569', n:['ถ้าระบบถูก deploy โดยบัญชีที่ไม่ใช่เจ้าของ Google Sheet ระบบจะไม่บันทึกไฟล์ลง Drive เลย (กันไฟล์เป็นของคนอื่นและกินพื้นที่บัญชีอื่น) และแจ้งให้เจ้าของ deploy ใหม่','หน้าพื้นที่จัดเก็บแสดงอีเมลบัญชีที่ระบบกำลังทำงานอยู่']},
   {v:'1.3.13', d:'12 พ.ย. 2569', n:['โฟลเดอร์เก็บไฟล์ถูกตรึงด้วย ID ของแต่ละระบบ ไม่ไปใช้โฟลเดอร์ชื่อซ้ำในไดรฟ์ของบัญชีอื่น','ถ้ามีคนที่ไม่ใช่เจ้าของระบบกด deploy ระบบจะไม่บันทึกไฟล์ผิดไดรฟ์ และแจ้งเตือนแอดมินตอนเข้าสู่ระบบให้เจ้าของ deploy ใหม่']},
   {v:'1.3.12', d:'11 พ.ย. 2569', n:['โลโก้ PNG ไม่ติดพื้นดำ: ระบบดึงไฟล์ต้นฉบับมาแสดง คงพื้นโปร่งใส','ลายเซ็นที่อัปโหลดเป็นภาพพื้นขาว ระบบตัดพื้นขาวออกให้อัตโนมัติตอนแสดงผล ในหน้าระบบ รายงาน และเกียรติบัตร (ไฟล์เดิมไม่ถูกแก้)','ท้ายเอกสารทุกชนิดแสดง “ออกแบบระบบ โดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ · พัฒนาระบบ โดย นนทพัทธ์ หิรัญเรือง”']},
   {v:'1.3.11', d:'10 พ.ย. 2569', n:['เอกสาร PDF: ตารางที่ต่อไปหน้าถัดไป จะมีหัวตารางซ้ำที่ต้นหน้าให้อัตโนมัติ','เกียรติบัตร PDF: แก้ภาพเลื่อน/ขอบขาดเมื่อเลื่อนหน้าจอ และรอรูปพื้นหลัง/ลายเซ็นโหลดครบก่อนสร้าง']},
@@ -1884,20 +1885,20 @@ async function getUsage(force){
   if(!USAGE||force||Date.now()-USAGE_T>600000){ USAGE=await gasCall('apiStorageUsage',Store.token); USAGE_T=Date.now(); }
   return USAGE;
 }
-function usageBar(used,limit){ if(!(limit>0)) return ''; const p=Math.min(100,used/limit*100), col=p>90?'#DC2626':p>75?'#F59E0B':'var(--p)';
-  return `<div class="ubar"><i style="width:${p.toFixed(1)}%;background:${col}"></i></div><div class="muted" style="font-size:12px;margin-top:4px">Google Drive ของบัญชีที่ติดตั้งระบบ ใช้ไป ${fmtBytes(used)} จาก ${fmtBytes(limit)} (${p.toFixed(1)}%)</div>`; }
+function usageBar(used,limit,acc){ if(!(limit>0)) return ''; const p=Math.min(100,used/limit*100), col=p>90?'#DC2626':p>75?'#F59E0B':'var(--p)';
+  return `<div class="ubar"><i style="width:${p.toFixed(1)}%;background:${col}"></i></div><div class="muted" style="font-size:12px;margin-top:4px">Google Drive ของบัญชีที่ติดตั้งระบบ${acc?' ('+esc(acc)+')':''} ใช้ไป ${fmtBytes(used)} จาก ${fmtBytes(limit)} (${p.toFixed(1)}%)</div>`; }
 async function renderUsage(compact){
   const box=$(compact?'#usageStrip':'#usageFull'); if(!box) return;
   if(compact&&!USAGE) box.innerHTML='<div class="card glass ustrip"><span class="muted">💾 กำลังคำนวณพื้นที่จัดเก็บ…</span></div>';
   let U; try{ U=await getUsage(false); }catch(e){ box.innerHTML=`<div class="${compact?'card glass ustrip':''}"><span class="muted">คำนวณพื้นที่ไม่สำเร็จ: ${esc(e.message)}</span></div>`; return; }
   if(!$(compact?'#usageStrip':'#usageFull')) return;
   const tl=`ภาคเรียนที่ ${esc(U.term)}/${esc(U.year)}`, Y=U.years||[], cy=Y.find(x=>x.year===String(U.year))||{bytes:0,files:0};
-  if(compact){ box.innerHTML=`<div class="card glass ustrip"><div class="row" style="gap:14px;flex-wrap:wrap"><b>💾 พื้นที่ที่ใช้ ${tl}</b><span class="badge y">${fmtBytes(U.termUsage.bytes)} · ${U.termUsage.files} ไฟล์</span><span class="muted" style="font-size:13px">ทั้งระบบ ${fmtBytes(U.system.bytes)}</span><span class="sp"></span><button class="btn sm" onclick="STAB='storage';go('settings')">ดูรายละเอียด</button></div>${usageBar(U.driveUsed,U.driveLimit)}</div>`; return; }
+  if(compact){ box.innerHTML=`<div class="card glass ustrip"><div class="row" style="gap:14px;flex-wrap:wrap"><b>💾 พื้นที่ที่ใช้ ${tl}</b><span class="badge y">${fmtBytes(U.termUsage.bytes)} · ${U.termUsage.files} ไฟล์</span><span class="muted" style="font-size:13px">ทั้งระบบ ${fmtBytes(U.system.bytes)}</span><span class="sp"></span><button class="btn sm" onclick="STAB='storage';go('settings')">ดูรายละเอียด</button></div>${usageBar(U.driveUsed,U.driveLimit,U.runAs)}</div>`; return; }
   box.innerHTML=`<div class="grid g3">
      <div class="ucard"><div class="muted">ใช้ไปใน${tl}</div><b>${fmtBytes(U.termUsage.bytes)}</b><span class="muted">${U.termUsage.files} ไฟล์</span></div>
      <div class="ucard"><div class="muted">ปีการศึกษา ${esc(U.year)} ทั้งปี</div><b>${fmtBytes(cy.bytes)}</b><span class="muted">${cy.files} ไฟล์</span></div>
      <div class="ucard"><div class="muted">ไฟล์ทั้งระบบ</div><b>${fmtBytes(U.system.bytes)}</b><span class="muted">${U.system.files} ไฟล์</span></div></div>
-    <div style="margin:14px 0">${usageBar(U.driveUsed,U.driveLimit)||'<div class="muted" style="font-size:13px">ไม่พบข้อมูลโควตา Drive</div>'}</div>
+    <div style="margin:14px 0">${usageBar(U.driveUsed,U.driveLimit,U.runAs)||'<div class="muted" style="font-size:13px">ไม่พบข้อมูลโควตา Drive</div>'}</div>
     <div class="tw"><table><thead><tr><th>โฟลเดอร์ปีการศึกษา</th><th>ขนาด</th><th>จำนวนไฟล์</th><th></th></tr></thead><tbody>
      ${Y.length?Y.map(x=>`<tr><td><b>ปีการศึกษา ${esc(x.year)}</b>${x.year===String(U.year)?' <span class="badge">ปีปัจจุบัน</span>':''}</td><td>${fmtBytes(x.bytes)}</td><td>${x.files}</td><td><a class="btn sm" target="_blank" href="${esc(x.url)}">เปิดใน Drive ↗</a></td></tr>`).join(''):'<tr><td colspan="4" class="empty">ยังไม่มีไฟล์</td></tr>'}
     </tbody></table></div>

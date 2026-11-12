@@ -567,9 +567,10 @@ function deployMsg_(owner, me){ return 'ระบบกำลังทำงา�
 function root_(){
   if (ROOT_FOLDER_ID) return DriveApp.getFolderById(ROOT_FOLDER_ID);
   const pin = rootPin_(), me = runAs_(), owner = sheetOwner_();
+  /* Apps Script ทำงานในนามคนที่กด deploy ล่าสุดเสมอ ไฟล์ที่สร้างจะเป็นของบัญชีนั้นและกินพื้นที่บัญชีนั้น → ถ้าไม่ใช่เจ้าของชีต ไม่ยอมเขียนไฟล์ */
+  if (owner && me && owner!==me) throw new Error(deployMsg_(owner, me));
   if (pin){ let f = null; try{ f = DriveApp.getFolderById(pin.id); }catch(e){}
     if (f && !f.isTrashed()) return f; }
-  if (owner && me && owner!==me) throw new Error(deployMsg_(owner, me));
   const f = folder_('ระบบนิเทศ-ไฟล์', DriveApp.getRootFolder());
   PropertiesService.getScriptProperties().setProperty('ROOT_PIN', JSON.stringify({sheet:ss_().getId(), id:f.getId(), owner:me, at:new Date().toISOString()}));
   return f;
@@ -688,7 +689,7 @@ function apiStorageUsage(token){
   const term = {bytes:0, files:0}, yf = root.getFoldersByName('ปีการศึกษา '+y);
   if (yf.hasNext()){ const secs = yf.next().getFolders(); while (secs.hasNext()){ const tf = secs.next().getFoldersByName('ภาคเรียนที่ '+t); while (tf.hasNext()) walk(tf.next(), term); } }
   let used = 0, limit = 0; try{ used = DriveApp.getStorageUsed(); limit = DriveApp.getStorageLimit(); }catch(e){}
-  return JSON.stringify({ ok:true, year:y, term:t, termUsage:term, system:walk(root, {bytes:0, files:0}), years:years, rootUrl:root.getUrl(), driveUsed:used, driveLimit:limit });
+  return JSON.stringify({ ok:true, year:y, term:t, termUsage:term, system:walk(root, {bytes:0, files:0}), years:years, rootUrl:root.getUrl(), driveUsed:used, driveLimit:limit, runAs:runAs_() });
 }
 /* คู่มือแอดมินโรงเรียน (PDF) สำหรับแนบท้ายเอกสารรหัส */
 const SA_MANUAL_ID = '1ytFHrNUABPzZj1nMGNIk62sE7OOgt96v';
