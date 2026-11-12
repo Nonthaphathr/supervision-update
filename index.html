@@ -25,9 +25,16 @@ button:disabled{opacity:.5;cursor:wait}
 ul.n{margin:0;padding-left:20px}
 .note{font-size:15px;color:var(--mut)}
 .err{color:#b91c1c}
+.mine{border:3px solid var(--o2);background:linear-gradient(135deg,#FFF7ED,#FEF9C3);text-align:center;box-shadow:0 0 0 6px rgba(249,115,22,.12)}
+.mine .go{display:inline-block;font-size:20px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--o2),var(--o));padding:14px 28px;border-radius:16px;text-decoration:none;animation:pl 2.4s infinite}
+@keyframes pl{0%{box-shadow:0 0 0 0 rgba(249,115,22,.55)}70%{box-shadow:0 0 0 16px rgba(249,115,22,0)}100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}}
+.mine input{font:inherit;width:100%;padding:10px 12px;border:1.5px solid var(--ln);border-radius:10px;margin:8px 0}
+.mine a.sm,.mine button.sm{font-size:14px;color:var(--o);background:none;padding:2px 6px;text-decoration:underline;font-weight:400}
 </style></head><body><div class="wrap">
 <header><h1>อัปเดตสคริปต์ระบบนิเทศ</h1><p>ระบบนิเทศและประเมินการสอน · อบจ.ศรีสะเกษ</p>
 <span class="ver" id="ver">กำลังโหลด…</span></header>
+
+<div class="card mine" id="mine"></div>
 
 <div class="card"><h2>ดูวิธีทำ (วิดีโอสั้น ๆ)</h2>
 <video controls preload="metadata" playsinline poster="media/poster-v3.jpg" style="width:100%;border-radius:12px;background:#000"><source src="media/update-howto-v3.mp4" type="video/mp4"></video>
@@ -63,6 +70,25 @@ async function copy(text){
   t.remove();return ok;
 }
 function kb(s){return (new Blob([s]).size/1024).toFixed(0)+' KB'}
+
+/* ลิงก์หน้าแก้โค้ดของฉัน: รับ ?p=<รหัสโปรเจกต์> จากในระบบ หรือวางลิงก์เอง แล้วจำไว้ในเครื่องนี้ */
+(function(){
+  const K='supUpdPid', ok=x=>/^[A-Za-z0-9_-]{20,}$/.test(x||'');
+  const fromText=t=>{ t=(t||'').trim(); const m=t.match(/projects\/([A-Za-z0-9_-]{20,})/); return m?m[1]:(ok(t)?t:''); };
+  try{ const q=new URLSearchParams(location.search).get('p'); if(ok(q)){ localStorage.setItem(K,q); history.replaceState(null,'',location.pathname); } }catch(e){}
+  function draw(){
+    let id=''; try{ id=localStorage.getItem(K)||''; }catch(e){}
+    const box=$('mine');
+    if(ok(id)){
+      box.innerHTML='<h2>หน้าแก้โค้ดของระบบท่าน</h2><a class="go" target="_blank" rel="noopener" href="https://script.google.com/home/projects/'+id+'/edit">↗ เปิดหน้าแก้โค้ดของฉัน</a><p class="note" style="margin:10px 0 0">เปิดแท็บใหม่ แล้วกลับมาที่หน้านี้เพื่อคัดลอกโค้ด · ใช้ได้เมื่อล็อกอินด้วยบัญชีเจ้าของระบบ<br><button class="sm" id="forget">ไม่ใช่ระบบของฉัน / เปลี่ยน</button></p>';
+      $('forget').onclick=()=>{ try{localStorage.removeItem(K)}catch(e){} draw(); };
+    }else{
+      box.innerHTML='<h2>ลิงก์หน้าแก้โค้ดของฉัน</h2><p class="note" style="margin:0">วิธีง่ายสุด: เปิดหน้านี้จากปุ่ม <b>ศูนย์อัปเดต</b> ในระบบ (ตั้งค่า › อัปเดตระบบ) จะได้ปุ่มเปิดหน้าแก้โค้ดให้อัตโนมัติ<br>หรือวางลิงก์หน้าแก้โค้ด (ขึ้นต้นด้วย script.google.com/…/projects/…/edit) ที่นี่ครั้งเดียว</p><input id="pid" placeholder="วางลิงก์หน้าแก้โค้ดที่นี่" autocomplete="off"><div id="perr" class="err note"></div><p class="note" style="margin:0"><a class="sm" target="_blank" rel="noopener" href="https://script.google.com/home">ยังไม่มีลิงก์? เปิดหน้ารวมโปรเจกต์ Apps Script</a></p>';
+      $('pid').oninput=e=>{ const v=fromText(e.target.value); if(v){ try{localStorage.setItem(K,v)}catch(x){} draw(); } else $('perr').textContent=e.target.value.includes('/macros/')?'ลิงก์ที่ลงท้าย /exec คือลิงก์ใช้งาน ไม่ใช่ลิงก์หน้าแก้โค้ด':''; };
+    }
+  }
+  draw();
+})();
 (async()=>{
   try{
     const v=await (await fetch('version.json'+bust(),{cache:'no-store'})).json();

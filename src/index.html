@@ -425,8 +425,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.23';
+const APP_VERSION = '1.3.24';
 const APP_CHANGELOG = [
+  {v:'1.3.24', d:'12 พ.ย. 2569', n:['ลิงก์ “ศูนย์อัปเดต” ในหน้าอัปเดตระบบ ส่งรหัสโปรเจกต์ไปด้วย ศูนย์อัปเดตจึงมีปุ่มเปิดหน้าแก้โค้ดของระบบนั้นให้ทันที']},
   {v:'1.3.23', d:'12 พ.ย. 2569', n:['ออกแบบหน้าอัปเดตระบบใหม่: ขั้น 1–2 อยู่ในกล่องเดียวพร้อมปุ่ม “เปิดหน้าแก้โค้ด” เด่น ๆ และขั้น 3 เป็นภาพจำลองเคลื่อนไหวพร้อมปุ่มเลือกทีละขั้น']},
   {v:'1.3.22', d:'12 พ.ย. 2569', n:['แก้ปุ่ม “เปิดหน้าแก้โค้ด” ในหน้าอัปเดตระบบที่เปิดเป็นหน้าว่าง']},
   {v:'1.3.21', d:'12 พ.ย. 2569', n:['ตั้งค่า › 🔄 อัปเดตระบบ: ตรวจเวอร์ชันล่าสุด พร้อมปุ่มคัดลอกโค้ดและเปิดหน้าแก้โค้ดตรงตัว อัปเดตเสร็จใน 3 ขั้น (เจ้าของเป็นคน deploy)','เมนูในชีต: 🧭 ระบบนิเทศ › 🔄 ตรวจเวอร์ชัน / วิธีอัปเดตระบบ']},
@@ -1996,7 +1997,7 @@ async function updRender(){ const box=$('#updBox'); if(!box) return;
     r.editor=r.editor||['https:','','script.google.com','home'].join('/');   /* Code.gs รุ่นเก่ายังไม่ส่งลิงก์มา → เปิดหน้ารวมโปรเจกต์แทน */
     UPD=r; }catch(e){ box.innerHTML=`<div class="qi">ตรวจสอบเวอร์ชันไม่สำเร็จ: ${esc(e.message)}</div>`; return; }
   if(!$('#updBox')) return;
-  const cur=r.current||APP_VERSION;
+  const cur=r.current||APP_VERSION, pm=String(r.editor||'').match(/projects\/([\w-]+)/);
   box.innerHTML=`<div class="grid g2">
      <div class="ucard"><div class="muted">เวอร์ชันที่ใช้อยู่</div><b style="font-size:26px">${esc(cur)}</b></div>
      <div class="ucard"><div class="muted">เวอร์ชันล่าสุด ${r.date?'· '+esc(r.date):''}</div><b style="font-size:26px;color:${r.newer?'var(--p)':'inherit'}">${esc(r.latest)}</b><span class="badge ${r.newer?'y':''}">${r.newer?'มีเวอร์ชันใหม่':'เป็นเวอร์ชันล่าสุดแล้ว'}</span></div></div>
@@ -2012,7 +2013,7 @@ async function updRender(){ const box=$('#updBox'); if(!box) return;
        <div class="upd-row"><div class="h"><i>2</i>คัดลอก index.html</div><div class="s">คลิกไฟล์ <b>index.html</b> › Ctrl+A › Ctrl+V › กดบันทึก 💾</div><div><button class="btn pri sm" onclick="updCopy('index.html',this)">📋 คัดลอก index.html</button></div></div>
      </div></div>
    ${updMockHtml()}
-   <div class="muted" style="margin-top:12px;font-size:13px">ข้อมูลในชีตไม่ถูกแตะต้อง · ดูคลิปวิธีอัปเดตและไฟล์ทั้งหมดได้ที่ <a href="${esc(r.center)}" target="_blank">ศูนย์อัปเดต</a></div>`;
+   <div class="muted" style="margin-top:12px;font-size:13px">ข้อมูลในชีตไม่ถูกแตะต้อง · ดูคลิปวิธีอัปเดตและไฟล์ทั้งหมดได้ที่ <a href="${esc(r.center+(pm?'?p='+pm[1]:''))}" target="_blank">ศูนย์อัปเดต</a></div>`;
   UPM.s=0; UPM.play=true; upmGo(0); }
 async function updCopy(f,btn){ const old=btn.textContent; btn.disabled=true; btn.textContent='กำลังดึงโค้ด…';
   try{ const t=await (await fetch(UPD.center+'src/'+f+'?t='+Date.now(),{cache:'no-store'})).text();
