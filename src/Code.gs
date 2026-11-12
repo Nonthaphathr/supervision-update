@@ -625,6 +625,10 @@ function updErrText_(e){ const m = String(e && e.message || e), k = m.split('::'
   if (k==='UPD_SCOPE') return 'ยังไม่ได้อนุญาตสิทธิ์ "จัดการโปรเจกต์ Apps Script / การเผยแพร่" — ให้เจ้าของอนุญาต (ทำครั้งเดียว) ตอนหน้าอนุญาตของ Google ขึ้น ให้ติ๊ก "เลือกทั้งหมด" ก่อนกดดำเนินการต่อ'+(d?' [รายละเอียด: '+d+']':'');
   return m; }
 /* เรียกจากหน้าแก้โค้ด (เลือกฟังก์ชันนี้ › เรียกใช้) เพื่อขอสิทธิ์อัปเดตครบทุกข้อ */
+/* ตรวจการเชื่อมต่อ Apps Script API (เลือกฟังก์ชันนี้ › เรียกใช้ › ดูบันทึกการดำเนินการ) */
+function checkUpdateApi(){ Logger.log('บัญชีที่รัน: '+runAs_()+' · เจ้าของชีต: '+sheetOwner_());
+  try{ const c = updApi_('get', ScriptApp.getScriptId()+'/content'); Logger.log('เชื่อมต่อ Apps Script API ได้ ✅ ไฟล์ในโปรเจกต์: '+(c.files||[]).map(function(f){ return f.name; }).join(', ')); }
+  catch(e){ Logger.log('เชื่อมต่อไม่ได้ ❌ '+e.message); } }
 function authorizeUpdate(){ ScriptApp.requireScopes(ScriptApp.AuthMode.FULL, UPD_SCOPES); ScriptApp.getOAuthToken(); Logger.log('อนุญาตสิทธิ์อัปเดตครบแล้ว ✅ เวอร์ชันล่าสุดบนศูนย์อัปเดต: '+updLatest_().version); }
 function apiUpdateInfo(token){ need_(me_(token),['Admin']); const v = updLatest_();
   return JSON.stringify({ok:true, latest:v.version, date:v.date||'', notes:v.notes||[], current:updCurrentVersion_(), newer:updNewer_(v.version, updCurrentVersion_()), warn:deployWarn_()}); }
@@ -645,8 +649,9 @@ function menuSelfUpdate(){
       const h = '<div style="font-family:Sarabun,Tahoma,sans-serif;font-size:14px;line-height:1.7">'
         + '<p style="margin-top:0">ต้องเปิด <b>Google Apps Script API</b> ก่อน (ทำครั้งเดียว)</p><ol style="padding-left:20px">'
         + '<li>กดปุ่มด้านล่าง (เปิดแท็บใหม่)</li><li>เปิดสวิตช์ <b>Google Apps Script API</b> ให้เป็น <b>เปิด</b></li><li>กลับมาที่ชีตนี้ แล้วกดเมนู 🔄 อัปเดตระบบ อีกครั้ง</li></ol>'
-        + '<p><a href="'+UPD_SETTINGS_URL+'" target="_blank" style="background:#F97316;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none">เปิดหน้าตั้งค่า Apps Script API</a></p></div>';
-      ui.showModalDialog(HtmlService.createHtmlOutput(h).setWidth(440).setHeight(260), 'ตั้งค่าครั้งแรก');
+        + '<p><a href="'+UPD_SETTINGS_URL+'" target="_blank" style="background:#F97316;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none">เปิดหน้าตั้งค่า Apps Script API</a></p>'
+        + '<p style="font-size:12px;color:#64748b">ตรวจว่าเปิดสวิตช์ด้วยบัญชี <b>'+runAs_()+'</b> (ดูรูปโปรไฟล์มุมขวาบนของหน้าตั้งค่า)<br>รายละเอียดจาก Google: '+String(e.message).split('::')[1].replace(/</g,'&lt;').slice(0,400)+'</p></div>';
+      ui.showModalDialog(HtmlService.createHtmlOutput(h).setWidth(480).setHeight(380), 'ตั้งค่าครั้งแรก');
     } else if (String(e.message).indexOf('UPD_SCOPE')===0 && /https:\S+/.test(String(e.message))){
       const link = String(e.message).match(/https:\S+/)[0];
       const h = '<div style="font-family:Sarabun,Tahoma,sans-serif;font-size:14px;line-height:1.7">'
