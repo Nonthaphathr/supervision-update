@@ -349,8 +349,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.14';
+const APP_VERSION = '1.3.15';
 const APP_CHANGELOG = [
+  {v:'1.3.15', d:'12 พ.ย. 2569', n:['เอกสารรหัส (บัญชีครู, รหัสแอดมินโรงเรียน, ตั้งรหัสผ่านรายคน) ที่สร้างซ้ำ จะมี “สร้างครั้งที่ …” ต่อท้ายชื่อไฟล์ ที่หัวเอกสาร และกรอบแจ้งท้ายกระดาษว่ารหัสฉบับก่อนใช้ไม่ได้แล้ว']},
   {v:'1.3.14', d:'12 พ.ย. 2569', n:['ถ้าระบบถูก deploy โดยบัญชีที่ไม่ใช่เจ้าของ Google Sheet ระบบจะไม่บันทึกไฟล์ลง Drive เลย (กันไฟล์เป็นของคนอื่นและกินพื้นที่บัญชีอื่น) และแจ้งให้เจ้าของ deploy ใหม่','หน้าพื้นที่จัดเก็บแสดงอีเมลบัญชีที่ระบบกำลังทำงานอยู่']},
   {v:'1.3.13', d:'12 พ.ย. 2569', n:['โฟลเดอร์เก็บไฟล์ถูกตรึงด้วย ID ของแต่ละระบบ ไม่ไปใช้โฟลเดอร์ชื่อซ้ำในไดรฟ์ของบัญชีอื่น','ถ้ามีคนที่ไม่ใช่เจ้าของระบบกด deploy ระบบจะไม่บันทึกไฟล์ผิดไดรฟ์ และแจ้งเตือนแอดมินตอนเข้าสู่ระบบให้เจ้าของ deploy ใหม่']},
   {v:'1.3.12', d:'11 พ.ย. 2569', n:['โลโก้ PNG ไม่ติดพื้นดำ: ระบบดึงไฟล์ต้นฉบับมาแสดง คงพื้นโปร่งใส','ลายเซ็นที่อัปโหลดเป็นภาพพื้นขาว ระบบตัดพื้นขาวออกให้อัตโนมัติตอนแสดงผล ในหน้าระบบ รายงาน และเกียรติบัตร (ไฟล์เดิมไม่ถูกแก้)','ท้ายเอกสารทุกชนิดแสดง “ออกแบบระบบ โดย ดร.ปิยะพันธ์ พิชญ์ประเสริฐ · พัฒนาระบบ โดย นนทพัทธ์ หิรัญเรือง”']},
@@ -1378,9 +1379,9 @@ async function saveUser(edit){
   if(!edit && pw.length<4) return SW.err('รหัสผ่านอย่างน้อย 4 ตัวอักษร');
   const d={username:un,name:val('u_name'),role:val('u_role'),group:val('u_group'),school:val('u_school'),position:val('u_pos'),rank:val('u_rank'),status:val('u_st'),
     schools:val('u_role')==='Supervisor'?[...document.querySelectorAll('.u_sc:checked')].map(c=>c.value):[]};
-  if(pw) d.newPass=pw;
+  if(pw){ d.newPass=pw; d.cred_no=(+((edit&&Store.data.Users[un])||{}).cred_no||0)+1; }
   await busy(()=>commit([{c:'Users',op:edit?'merge':'set',id:un,data:Object.assign(edit?{}:{signature_url:''},d)}])); closeModal(); render(); toast('บันทึกผู้ใช้แล้ว');
-  if(pw){ GENACC={school:d.school||'(ไม่ระบุโรงเรียน)',at:new Date(),accounts:[{name:d.name,position:d.position||'',rank:d.rank||'',username:un,password:pw}]}; showGenAcc(); }
+  if(pw){ GENACC={school:d.school||'(ไม่ระบุโรงเรียน)',at:new Date(),no:d.cred_no,accounts:[{name:d.name,position:d.position||'',rank:d.rank||'',username:un,password:pw}]}; showGenAcc(); }
 }
 async function renameUserUi(id){
   const r=await Swal.fire({title:'เปลี่ยนชื่อผู้ใช้',html:`<div style="font-size:14px;margin-bottom:8px">ชื่อเดิม: <b>${esc(id)}</b><br>ระบบจะย้ายแผนการสอน ผลประเมิน และการจองของคนนี้ไปใช้ชื่อใหม่ รหัสผ่านเดิมยังใช้ได้ (ผู้ใช้ต้องเข้าสู่ระบบใหม่)</div>`,input:'text',inputValue:cleanUn(id).replace(/[^\p{L}\p{M}\p{N}._@\-]/gu,''),inputPlaceholder:'ชื่อผู้ใช้ใหม่',showCancelButton:true,confirmButtonText:'เปลี่ยนชื่อ',cancelButtonText:'ยกเลิก',confirmButtonColor:getCss('--p')});
@@ -1443,30 +1444,35 @@ async function doGenAcc(id){
     r={accounts:T.map(u=>{ const nu=abbr+'_'+String(n++).padStart(3,'0'), pw=Array.from({length:8},()=>A[Math.floor(Math.random()*A.length)]).join('');
       delete Store.data.Users[u.username]; Store.data.Users[nu]={...u,username:nu}; return {name:u.name,position:u.position||'',rank:u.rank||'',role:u.role,username:nu,password:pw}; })};
     Store.data.Schools[id].abbr=abbr; }
-  GENACC={school:x.name,abbr,accounts:r.accounts,at:new Date()}; render(); showGenAcc();
+  const no=(+((Store.data.Schools[id]||{}).acc_no)||0)+1; try{ await commit([{c:'Schools',op:'merge',id,data:{acc_no:no}}]); }catch(err){}
+  GENACC={school:x.name,abbr,accounts:r.accounts,at:new Date(),no}; render(); showGenAcc();
 }
+/* เอกสารรหัส: นับครั้งที่ออกเอกสาร (สร้างซ้ำ = ครั้งที่ 2 ขึ้นไป) */
+const issueTag=n=>(+n||0)>1?'สร้างครั้งที่ '+n:'';
+const issueSuf=n=>(+n||0)>1?'_สร้างครั้งที่'+n:'';
+const issueFoot=n=>(+n||0)>1?`<div style="margin-top:10px;padding:6px 10px;border:1px dashed #F59E0B;border-radius:6px;font-size:12.5px;color:#9A3412;text-align:center">เอกสารฉบับนี้ <b>สร้างครั้งที่ ${n}</b> · รหัสผ่านในเอกสารฉบับก่อนหน้าใช้ไม่ได้แล้ว</div>`:'';
 function genAccHtml(){ const g=GENACC, si=Store.settings.school_info||{}, url=(window.APP_BOOT&&APP_BOOT.url)||'';
-  return `<html><head><meta charset="utf-8"><style>@page{size:A4;margin:14mm}body{font-family:'Sarabun','TH SarabunPSK',sans-serif;margin:0;color:#111;font-size:15px}
+  return `<html><head><meta charset="utf-8"><title>${esc('บัญชีผู้ใช้_'+g.school+'_'+ymd(g.at)+issueSuf(g.no))}</title><style>@page{size:A4;margin:14mm}body{font-family:'Sarabun','TH SarabunPSK',sans-serif;margin:0;color:#111;font-size:15px}
    h1{font-size:20px;text-align:center;margin:4px 0}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #999;padding:5px 8px}th{background:#FED7AA}
    td.c{text-align:center}.mono{font-family:Consolas,'Courier New',monospace;font-size:15px;letter-spacing:.5px}.note{font-size:13px;color:#444;margin-top:10px}</style></head><body>
    <div style="text-align:center">${1?`<img src="${esc(logoSrc(300))}" style="height:64px">`:''}</div>
    <h1>บัญชีผู้ใช้งานระบบนิเทศและประเมินการสอน</h1>
    <div style="text-align:center">${esc(g.school)} · ${esc(si.name||'')}</div>
-   <div style="text-align:center;font-size:13px;color:#555">ออกให้เมื่อ ${thDate(g.at)} เวลา ${g.at.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} น.</div>
+   <div style="text-align:center;font-size:13px;color:#555">ออกให้เมื่อ ${thDate(g.at)} เวลา ${g.at.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} น.${issueTag(g.no)?' · <b style="color:#9A3412">'+issueTag(g.no)+'</b>':''}</div>
    <table><tr><th style="width:40px">ที่</th><th>ชื่อ-สกุล</th><th>ตำแหน่ง</th><th style="width:130px">ชื่อผู้ใช้ (Username)</th><th style="width:120px">รหัสผ่าน (Password)</th></tr>
    ${g.accounts.map((a,i)=>`<tr><td class="c">${i+1}</td><td>${esc(a.name)}</td><td>${esc(a.position)}${a.rank?' '+esc(a.rank):''}</td><td class="mono">${esc(a.username)}</td><td class="mono">${esc(a.password)}</td></tr>`).join('')}</table>
-   <div class="note">• เข้าใช้งานที่: ${esc(url)} › เลือกการ์ด "ครูผู้สอน / ผู้บริหาร"<br>• เข้าสู่ระบบครั้งแรกแล้วเปลี่ยนรหัสผ่านที่ปุ่ม 🔑 · เอกสารนี้มีข้อมูลรหัสผ่าน โปรดเก็บรักษาเป็นความลับ</div>${CREDIT_P()}</body></html>`; }
+   <div class="note">• เข้าใช้งานที่: ${esc(url)} › เลือกการ์ด "ครูผู้สอน / ผู้บริหาร"<br>• เข้าสู่ระบบครั้งแรกแล้วเปลี่ยนรหัสผ่านที่ปุ่ม 🔑 · เอกสารนี้มีข้อมูลรหัสผ่าน โปรดเก็บรักษาเป็นความลับ</div>${issueFoot(g.no)}${CREDIT_P()}</body></html>`; }
 function showGenAcc(){ const g=GENACC; window.GENACC_OPEN=true;
-  openModal(`<div class="row" style="margin-bottom:10px"><h3>✅ ${g.accounts.length>1?'สร้างบัญชีแล้ว '+g.accounts.length+' คน':'ตั้งรหัสผ่านแล้ว'}</h3><span class="sp"></span><span class="badge">${esc(g.school)}</span></div>
+  openModal(`<div class="row" style="margin-bottom:10px"><h3>✅ ${g.accounts.length>1?'สร้างบัญชีแล้ว '+g.accounts.length+' คน':'ตั้งรหัสผ่านแล้ว'}</h3><span class="sp"></span>${issueTag(g.no)?`<span class="badge y">${issueTag(g.no)}</span>`:''}<span class="badge">${esc(g.school)}</span></div>
    <div class="qi" style="background:rgba(250,204,21,.18)">⚠️ <span class="tx" style="font-size:13px">รหัสผ่านแสดงเพียงครั้งเดียว — พิมพ์หรือบันทึก PDF ก่อนปิดหน้าต่างนี้</span></div>
    <div class="tw" style="max-height:46vh;overflow:auto"><table><thead><tr><th>ที่</th><th>ชื่อ-สกุล</th><th>ตำแหน่ง</th><th>Username</th><th>Password</th></tr></thead><tbody>
    ${g.accounts.map((a,i)=>`<tr><td>${i+1}</td><td>${esc(a.name)}</td><td style="font-size:12px">${esc(a.position)}</td><td><b>${esc(a.username)}</b></td><td style="font-family:monospace;font-size:14px">${esc(a.password)}</td></tr>`).join('')}</tbody></table></div>
    <div class="row" style="margin-top:14px"><button class="btn" onclick="genAccCsv()">⬇️ CSV</button><span class="sp"></span>
      <button class="btn acc" onclick="genAccPrint()">🖨️ พิมพ์ / บันทึก PDF</button>${MODE==='gas'&&['Admin','Supervisor'].includes(Store.user.role)?'<button class="btn pri" onclick="genAccDrive()">📄 สร้าง PDF เก็บใน Drive</button>':''}<button class="btn" onclick="genAccClose()">ปิด</button></div>`,'900px'); }
 function genAccPrint(){ const w=window.open('','_blank'); if(!w) return SW.err('เบราว์เซอร์บล็อกหน้าต่างใหม่'); w.document.write(genAccHtml()); w.document.close(); setTimeout(()=>w.print(),600); }
-async function genAccDrive(){ const pdf=await busy(()=>htmlToPdfB64(genAccHtml())); const r=await busy(()=>gasCall('apiMakePdf',Store.token,JSON.stringify({pdf,filename:'บัญชีผู้ใช้_'+GENACC.school+'_'+ymd(new Date()),sub:'บัญชีผู้ใช้ (ลับ)'})));
+async function genAccDrive(){ const pdf=await busy(()=>htmlToPdfB64(genAccHtml())); const r=await busy(()=>gasCall('apiMakePdf',Store.token,JSON.stringify({pdf,filename:'บัญชีผู้ใช้_'+GENACC.school+'_'+ymd(new Date())+issueSuf(GENACC.no),sub:'บัญชีผู้ใช้ (ลับ)'})));
   window.open(r.url,'_blank'); toast('สร้าง PDF ใน Drive แล้ว'); }
-function genAccCsv(){ csv('บัญชีผู้ใช้_'+GENACC.school,[['ที่','ชื่อ-สกุล','ตำแหน่ง','Username','Password'],...GENACC.accounts.map((a,i)=>[i+1,a.name,a.position,a.username,a.password])]); }
+function genAccCsv(){ csv('บัญชีผู้ใช้_'+GENACC.school+issueSuf(GENACC.no),[['ที่','ชื่อ-สกุล','ตำแหน่ง','Username','Password'],...GENACC.accounts.map((a,i)=>[i+1,a.name,a.position,a.username,a.password])]); }
 /* ===== สร้างรหัสแอดมินโรงเรียน (แอดมินระบบ) ===== */
 let SAGEN=null, SAM='pick', SAI=0;
 const SA_MANUAL_ID='1ytFHrNUABPzZj1nMGNIk62sE7OOgt96v';
@@ -1519,16 +1525,16 @@ async function saCreate(){
     const tp=genPw(); teacher={username:tu,password:tp}; link=tu;
     ops.push({c:'Users',op:'set',id:tu,data:{username:tu,name,position:pos,role:val('sa_role')||'Teacher',rank:val('sa_rank'),group:val('sa_group'),school,status:'active',schools:[],signature_url:'',newPass:tp}});
   }
-  ops.push({c:'Users',op:'set',id:un,data:{username:un,name,position:pos,role:'SchoolAdmin',status:'active',school,group:'',rank:'',schools:[],signature_url:'',linked_user:link,newPass:pw}});
+  ops.push({c:'Users',op:'set',id:un,data:{username:un,name,position:pos,role:'SchoolAdmin',status:'active',school,group:'',rank:'',schools:[],signature_url:'',linked_user:link,newPass:pw,cred_no:1}});
   await busy(()=>commit(ops));
-  SAGEN={school,name,position:pos,username:un,password:pw,teacher,at:new Date(),reset:false}; render(); saShow();
+  SAGEN={school,name,position:pos,username:un,password:pw,teacher,at:new Date(),reset:false,no:1}; render(); saShow();
 }
 async function saReset(un){ const u=Store.data.Users[un]; if(!u) return;
   if(!(await SW.confirm('ออกรหัสผ่านใหม่ให้ '+u.name+'?','รหัสผ่านเดิมของบัญชี '+un+' จะใช้ไม่ได้'))) return;
-  const pw=genPw(); await busy(()=>commit([{c:'Users',op:'merge',id:un,data:{newPass:pw,status:'active'}}]));
-  SAGEN={school:u.school,name:u.name,position:u.position||'',username:un,password:pw,at:new Date(),reset:true}; render(); saShow(); }
+  const pw=genPw(), no=(+u.cred_no||1)+1; await busy(()=>commit([{c:'Users',op:'merge',id:un,data:{newPass:pw,status:'active',cred_no:no}}]));
+  SAGEN={school:u.school,name:u.name,position:u.position||'',username:un,password:pw,at:new Date(),reset:true,no}; render(); saShow(); }
 function saShow(){ const g=SAGEN;
-  openModal(`<div class="row" style="margin-bottom:10px"><h3>✅ ${g.reset?'ออกรหัสใหม่แล้ว':'สร้างบัญชีแอดมินโรงเรียนแล้ว'}</h3><span class="sp"></span><span class="badge">${esc(g.school)}</span></div>
+  openModal(`<div class="row" style="margin-bottom:10px"><h3>✅ ${g.reset?'ออกรหัสใหม่แล้ว':'สร้างบัญชีแอดมินโรงเรียนแล้ว'}</h3><span class="sp"></span>${issueTag(g.no)?`<span class="badge y">${issueTag(g.no)}</span>`:''}<span class="badge">${esc(g.school)}</span></div>
    <div class="qi" style="background:rgba(250,204,21,.18)">⚠️ <span class="tx" style="font-size:13px">รหัสผ่านแสดงเพียงครั้งเดียว — ดาวน์โหลดหรือบันทึกเอกสาร PDF ก่อนปิดหน้าต่างนี้</span></div>
    <div class="grid g2" style="margin-top:12px">
      <div class="ucard"><span class="muted">ผู้รับผิดชอบ</span><b style="font-size:18px">${esc(g.name)}</b><span class="muted">${esc(g.position||'-')}</span></div>
@@ -1577,7 +1583,7 @@ function saDocHtml(){ const g=SAGEN, si=Store.settings.school_info||{}, s=Store.
     <li>กดปุ่มรูปกุญแจที่มุมล่างซ้ายเพื่อเปลี่ยนรหัสผ่านใหม่ทันที</li>
     <li>ศึกษาขั้นตอนการใช้งานจากคู่มือแนบท้ายเอกสารนี้</li></ol>
    <div class="sdw"><div>ข้อควรระวัง</div><div>เอกสารนี้มีข้อมูลสำหรับเข้าสู่ระบบ โปรดเก็บรักษาเป็นความลับ ห้ามส่งต่อบุคคลอื่น หากลืมรหัสผ่านหรือเปลี่ยนผู้รับผิดชอบ ให้ติดต่อแอดมินระบบเพื่อออกรหัสใหม่</div></div>
-   <div class="sdf"><span>ออกให้เมื่อ ${thDate(at)} เวลา ${at.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} น.</span><span>ผู้ออกเอกสาร: ${esc(Store.user.name||'')}</span></div>
+   ${issueFoot(g.no)}<div class="sdf"><span>ออกให้เมื่อ ${thDate(at)} เวลา ${at.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} น.${issueTag(g.no)?' · '+issueTag(g.no):''}</span><span>ผู้ออกเอกสาร: ${esc(Store.user.name||'')}</span></div>
    <div class="sdc" style="margin-top:8px;font-size:12.5px;color:#9A3412">— เอกสารแนบท้าย: คู่มือการใช้งานสำหรับแอดมินโรงเรียน —</div>${CREDIT_P('margin-top:10px;text-align:center')}</body></html>`; }
 async function saBuildPdf(){
   if(MODE==='gas'&&(!SHORT||SHORT.loading||SHORT.err)){ try{ await loadShort(false); }catch(e){} SAGEN.qr=null; }
@@ -1593,7 +1599,7 @@ async function saBuildPdf(){
   return {b64:await out.saveAsBase64(), manual:true};
 }
 async function saPdf(mode){ if(!SAGEN) return;
-  const r=await busy(()=>saBuildPdf()), fname='รหัสแอดมินโรงเรียน_'+clean(SAGEN.school)+'_'+ymd(new Date());
+  const r=await busy(()=>saBuildPdf()), fname='รหัสแอดมินโรงเรียน_'+clean(SAGEN.school)+'_'+ymd(new Date())+issueSuf(SAGEN.no);
   if(mode==='drive'){ const x=await busy(()=>gasCall('apiMakePdf',Store.token,JSON.stringify({pdf:r.b64,filename:fname,sub:'บัญชีผู้ใช้ (ลับ)'}))); window.open(x.url,'_blank'); toast('เก็บ PDF ใน Drive แล้ว'); }
   else { saveBlob(new Blob([b64ToBytes(r.b64)],{type:'application/pdf'}),fname+'.pdf'); toast('ดาวน์โหลด PDF แล้ว'); }
   if(!r.manual) SW.err('แนบคู่มือไม่สำเร็จ','ได้เฉพาะหน้าข้อมูลรหัส · ดาวน์โหลดคู่มือแอดมินโรงเรียนแยกได้ที่ปุ่ม “ดาวน์โหลดคู่มือ” หน้าแรก');
