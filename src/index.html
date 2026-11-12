@@ -154,6 +154,82 @@ nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 0;scrollbar-width:thin
 .ubar{height:10px;border-radius:999px;background:rgba(15,23,42,.08);overflow:hidden;margin-top:10px}.ubar i{display:block;height:100%;border-radius:999px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
 .ustrip{padding:14px 18px}
 .ucard{display:flex;flex-direction:column;gap:4px;padding:16px;border-radius:16px;background:#fff;border:1px solid rgba(0,0,0,.06)}.ucard b{font-size:24px;color:var(--p2)}
+/* ===== หน้าอัปเดตระบบ (v1.3.23) ===== */
+.upd-open{border:3px solid var(--p);border-radius:22px;background:linear-gradient(135deg,#FFF7ED,#FEF9C3);padding:20px;box-shadow:0 0 0 6px rgba(249,115,22,.12),var(--glowS)}
+.upd-hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:4px 0 18px}
+.upd-tag{font-size:12px;font-weight:600;letter-spacing:.3px;color:var(--p2);background:#fff;border:1px solid rgba(249,115,22,.3);border-radius:999px;padding:3px 12px}
+.upd-big{font:600 20px 'Prompt',sans-serif;padding:14px 30px;border-radius:16px;border:0;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;cursor:pointer;animation:updPulse 2.4s infinite;transition:transform .15s}
+.upd-big:hover{transform:translateY(-2px)}
+@keyframes updPulse{0%{box-shadow:0 0 0 0 rgba(249,115,22,.55)}70%{box-shadow:0 0 0 16px rgba(249,115,22,0)}100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}}
+.upd-cap{font-size:13px;color:var(--muted);max-width:540px;line-height:1.65}
+.upd-rows{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.upd-row{background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,.06);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.upd-row .h{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px}
+.upd-row .h i{font-style:normal;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--p);color:#fff;font-size:14px}
+.upd-row .s{font-size:13px;color:var(--muted);line-height:1.7}
+.upd-row .s b{color:var(--ink);font-weight:600}
+.upm-card{margin-top:16px;background:#fff;border-radius:20px;border:1px solid rgba(0,0,0,.06);padding:16px 18px}
+.upm-card .ttl{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;margin-bottom:12px}
+.upm-card .ttl i{font-style:normal;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--p);color:#fff;font-size:14px}
+.upm{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:18px;align-items:start}
+.upm-win{position:relative;height:330px;border-radius:12px;overflow:hidden;background:#fff;border:1px solid #cfd3d8;box-shadow:0 14px 34px -14px rgba(0,0,0,.35);font:12px 'Prompt',sans-serif;color:#3c4043;user-select:none}
+.upm-bar{height:42px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid #dadce0;background:#f8f9fa}
+.upm-bar .t{font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upm-ico{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:15px;position:relative}
+.upm-dep{padding:6px 12px;border-radius:8px;background:#1a73e8;color:#fff;font-weight:500;position:relative}
+.upm-body{display:grid;grid-template-columns:112px 1fr;height:calc(100% - 42px)}
+.upm-files{border-right:1px solid #dadce0;padding:10px 6px;background:#fafafa}
+.upm-files small{display:block;color:#80868b;margin:0 6px 6px}
+.upm-file{padding:6px 8px;border-radius:6px;margin-bottom:2px;position:relative}
+.upm-file.cur{background:#e8f0fe;color:#1967d2;font-weight:600}
+.upm-code{padding:14px;position:relative;display:flex;flex-direction:column;gap:8px}
+.upm-code i{display:block;height:9px;border-radius:5px;background:#dadce0}
+.upm-code.sel i{animation:upmSel 3.4s forwards}
+.upm-code.new i{background:#fdba74}
+@keyframes upmSel{0%,40%{background:#aecbfa}55%,100%{background:#fdba74}}
+.upm-key{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:8px;font:600 12px 'Prompt'}
+.upm-key span{background:#202124;color:#fff;padding:4px 10px;border-radius:7px;opacity:0}
+.upm-key span:nth-child(1){animation:upmK 1.5s .1s forwards}
+.upm-key span:nth-child(2){animation:upmK 1.6s 1.7s forwards}
+@keyframes upmK{0%{opacity:0;transform:translateY(6px)}20%,80%{opacity:1;transform:none}100%{opacity:.0}}
+.upm-toast{position:absolute;left:12px;bottom:12px;background:#202124;color:#fff;padding:8px 14px;border-radius:8px;animation:upmFade .5s .5s both}
+@keyframes upmFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.upm-menu{position:absolute;right:8px;top:46px;width:200px;background:#fff;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.28);padding:6px 0;z-index:3}
+.upm-menu div{padding:8px 14px}
+.upm-dim{position:absolute;inset:0;background:rgba(32,33,36,.45);z-index:3}
+.upm-dlg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76%;max-width:300px;background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.4);z-index:4;padding:14px 16px}
+.upm-dlg .hd{font-weight:600;font-size:13px;margin-bottom:10px}
+.upm-dlg .rw{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#f1f3f4;border-radius:8px;margin-bottom:10px}
+.upm-dlg .pen{width:26px;height:26px;display:grid;place-items:center;border-radius:6px;position:relative}
+.upm-dlg .fld{position:relative;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.upm-dlg .sl{flex:1;border:1px solid #9aa0a6;border-radius:6px;padding:6px 10px;display:flex;justify-content:space-between}
+.upm-opts{position:absolute;left:44px;right:0;top:34px;background:#fff;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.3);padding:4px 0;z-index:2}
+.upm-opts div{padding:6px 10px}
+.upm-dlg .ft{display:flex;justify-content:flex-end}
+.upm-btn{background:#1a73e8;color:#fff;padding:7px 14px;border-radius:8px;font-weight:500;position:relative}
+.upm-ok{position:absolute;inset:0;z-index:6;background:rgba(255,255,255,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:18px;font-weight:600;color:#15803D;animation:upmFade .5s 1.6s both}
+.upm-ok small{font-size:12px;color:#5f6368;font-weight:400}
+.upm-cur{position:absolute;z-index:9;left:30px;top:60px;width:22px;height:22px;transition:left .9s cubic-bezier(.4,0,.2,1),top .9s cubic-bezier(.4,0,.2,1);pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+.upm-badge{position:absolute;right:8px;bottom:8px;font-size:10px;background:rgba(249,115,22,.12);color:var(--p2);padding:2px 8px;border-radius:999px;z-index:1}
+.hl::after{content:"";position:absolute;inset:-4px;border:3px solid var(--p);border-radius:10px;animation:upmRing 1.2s ease-in-out infinite;pointer-events:none}
+@keyframes upmRing{50%{transform:scale(1.07);opacity:.55}}
+[data-on]{display:none}[data-on].on{display:block}
+.upm-bar [data-on].on,.upm-dlg .sl [data-on].on{display:inline}
+.upm-ok[data-on].on{display:flex}
+.upm-side{display:flex;flex-direction:column;gap:6px}
+.upm-st{display:flex;gap:10px;align-items:flex-start;text-align:left;padding:8px 10px;border-radius:12px;border:1.5px solid transparent;background:#fafafa;cursor:pointer;font:inherit;position:relative;overflow:hidden}
+.upm-st i{font-style:normal;flex:0 0 26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#e5e7eb;color:#475569;font-size:13px;font-weight:600}
+.upm-st>div>b{display:block;font-size:14px;font-weight:600}.upm-st span b{font-weight:600;color:var(--ink)}
+.upm-st span{display:none;font-size:12.5px;color:var(--muted);line-height:1.6}
+.upm-st.act{background:#FFF7ED;border-color:var(--p)}
+.upm-st.act i{background:var(--p);color:#fff}
+.upm-st.act span{display:block}
+.upm-st.done i{background:#16A34A;color:#fff}
+.upm-st u{position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--p)}
+.upm-st.act.run u{animation:upmProg 4.2s linear forwards}
+@keyframes upmProg{to{width:100%}}
+.upm-ctl{display:flex;gap:8px;margin-top:6px}
+@media(max-width:900px){.upm{grid-template-columns:1fr}.upd-rows{grid-template-columns:1fr}}
 .dchips{display:flex;flex-wrap:wrap;gap:6px}
 .dchip{position:relative;display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;font-family:inherit;font-size:12px;font-weight:500;line-height:1.4;border:1px solid rgba(249,115,22,.3);background:#FFF7ED;color:var(--p2);cursor:pointer;white-space:nowrap;transition:background .2s,transform .2s,box-shadow .2s}
 .dchip:hover{background:#FFEDD5;transform:translateY(-1px);box-shadow:0 6px 14px -6px rgba(249,115,22,.5)}
@@ -349,8 +425,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.22';
+const APP_VERSION = '1.3.23';
 const APP_CHANGELOG = [
+  {v:'1.3.23', d:'12 พ.ย. 2569', n:['ออกแบบหน้าอัปเดตระบบใหม่: ขั้น 1–2 อยู่ในกล่องเดียวพร้อมปุ่ม “เปิดหน้าแก้โค้ด” เด่น ๆ และขั้น 3 เป็นภาพจำลองเคลื่อนไหวพร้อมปุ่มเลือกทีละขั้น']},
   {v:'1.3.22', d:'12 พ.ย. 2569', n:['แก้ปุ่ม “เปิดหน้าแก้โค้ด” ในหน้าอัปเดตระบบที่เปิดเป็นหน้าว่าง']},
   {v:'1.3.21', d:'12 พ.ย. 2569', n:['ตั้งค่า › 🔄 อัปเดตระบบ: ตรวจเวอร์ชันล่าสุด พร้อมปุ่มคัดลอกโค้ดและเปิดหน้าแก้โค้ดตรงตัว อัปเดตเสร็จใน 3 ขั้น (เจ้าของเป็นคน deploy)','เมนูในชีต: 🧭 ระบบนิเทศ › 🔄 ตรวจเวอร์ชัน / วิธีอัปเดตระบบ']},
   {v:'1.3.17', d:'12 พ.ย. 2569', n:['ตั้งค่า › ♻️ สร้างเอกสารใหม่: เลือกผลประเมินเดิม (กรองตามปี/ภาค/โรงเรียน/แบบ) แล้วสร้างรายงาน PDF ใหม่ด้วยรูปแบบล่าสุด แทนที่ไฟล์เดิมใน Drive ได้ทีละหลายรายการ','สร้าง PDF ซ้ำได้ชื่อไฟล์เดิม (ไม่เติม (2) ต่อท้าย)']},
@@ -1872,6 +1949,46 @@ async function regenRun(){ if(MODE!=='gas') return SW.err('ใช้ได้เ
   else SW.ok('สร้างเอกสารใหม่เรียบร้อย '+ok+' รายการ'); }
 /* ===== อัปเดตระบบ: ตรวจเวอร์ชัน + คัดลอกโค้ด + เปิดหน้าแก้โค้ด (เจ้าของเป็นคน deploy) ===== */
 let UPD=null;
+const UPM_STEPS=[['เลือกไฟล์','ที่แถบซ้ายคลิก <b>รหัส.gs</b> (แล้วทำซ้ำกับ <b>index.html</b>)'],
+  ['วางโค้ดทับของเดิม','คลิกในช่องโค้ด › <b>Ctrl+A</b> › <b>Ctrl+V</b>'],
+  ['กดบันทึก 💾','ต้องบันทึกทั้ง 2 ไฟล์ก่อนเผยแพร่'],
+  ['เปิดเมนูเผยแพร่','มุมขวาบน <b>การทำให้ใช้งานได้</b> › <b>จัดการการทำให้ใช้งานได้</b>'],
+  ['เลือกเวอร์ชันใหม่','กด ✏️ แล้วที่ช่อง <b>เวอร์ชัน</b> เลือก <b>เวอร์ชันใหม่</b>'],
+  ['กดเผยแพร่','กดปุ่ม <b>การทำให้ใช้งานได้</b> · ลิงก์เดิมใช้ต่อได้ ข้อมูลในชีตไม่หาย']];
+const UPM_TGT=['upmFa','upmCode','upmSave','upmMenuI','upmVerO','upmDepBtn'];
+let UPM={s:0,play:true,t:null};
+function updMockHtml(){
+  const bars=[70,92,55,84,40,76,62,88].map(w=>`<i style="width:${w}%"></i>`).join('');
+  return `<div class="upm-card"><div class="ttl"><i>3</i>แก้โค้ดและเผยแพร่เวอร์ชันใหม่ <span class="badge">ตัวอย่างจำลอง · คลิกเลขขั้นเพื่อดูทีละขั้น</span></div>
+   <div class="upm" id="upm">
+    <div class="upm-win" id="upmWin">
+     <div class="upm-bar"><span class="t">ระบบนิเทศและประเมินการสอน</span><span class="upm-ico" id="upmSave" data-hl="3">💾</span><span class="upm-dep" id="upmDep" data-hl="4">การทำให้ใช้งานได้ ▾</span></div>
+     <div class="upm-body"><div class="upm-files"><small>ไฟล์</small><div class="upm-file" id="upmFa" data-hl="1">รหัส.gs</div><div class="upm-file">index.html</div></div>
+      <div class="upm-code" id="upmCode" data-cls="2:sel 3:new 4:new 5:new 6:new">${bars}
+       <div class="upm-key" data-on="2"><span>Ctrl+A</span><span>Ctrl+V</span></div></div></div>
+     <div class="upm-toast" data-on="3">✓ บันทึกโปรเจกต์แล้ว</div>
+     <div class="upm-dim" data-on="4,5,6"></div>
+     <div class="upm-menu" data-on="4"><div>การทำให้ใช้งานใหม่</div><div id="upmMenuI" data-hl="4" style="background:#e8f0fe;position:relative">จัดการการทำให้ใช้งานได้</div><div>ทดสอบการทำให้ใช้งานได้</div></div>
+     <div class="upm-dlg" data-on="5,6"><div class="hd">จัดการการทำให้ใช้งานได้</div>
+      <div class="rw"><span>เว็บแอป · ใช้งานอยู่</span><span class="pen" data-hl="5">✏️</span></div>
+      <div class="fld"><span>เวอร์ชัน</span><span class="sl"><span><span data-on="5">39</span><span data-on="6"><b>เวอร์ชันใหม่</b></span></span><span>▾</span></span>
+       <div class="upm-opts" data-on="5"><div id="upmVerO" data-hl="5" style="background:#e8f0fe;position:relative"><b>เวอร์ชันใหม่</b></div><div>39</div><div>38</div></div></div>
+      <div class="ft"><span class="upm-btn" id="upmDepBtn" data-hl="6">การทำให้ใช้งานได้</span></div></div>
+     <div class="upm-ok" data-on="6">✓ อัปเดตเรียบร้อย<small>ลิงก์เดิมใช้ต่อได้ · ข้อมูลไม่หาย</small></div>
+     <svg class="upm-cur" id="upmCur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/></svg>
+     <span class="upm-badge">จำลองหน้าจอ Apps Script</span></div>
+    <div class="upm-side">${UPM_STEPS.map((s,i)=>`<button class="upm-st" data-i="${i}" onclick="upmGo(${i},true)"><i>${i+1}</i><div><b>${s[0]}</b><span>${s[1]}</span></div><u></u></button>`).join('')}
+     <div class="upm-ctl"><button class="btn sm" onclick="upmGo((UPM.s+5)%6,true)">◀ ก่อนหน้า</button><button class="btn pri sm" id="upmPP" onclick="upmToggle()">⏸ หยุด</button><button class="btn sm" onclick="upmGo((UPM.s+1)%6,true)">ถัดไป ▶</button></div></div></div></div>`; }
+function upmGo(i,manual){ const win=document.getElementById('upmWin'); if(!win) return; UPM.s=i; const n=i+1;
+  win.querySelectorAll('[data-on]').forEach(e=>e.classList.toggle('on',e.dataset.on.split(',').includes(String(n))));
+  win.querySelectorAll('[data-hl]').forEach(e=>e.classList.toggle('hl',+e.dataset.hl===n));
+  win.querySelectorAll('[data-cls]').forEach(e=>{ e.classList.remove('sel','new'); const m=e.dataset.cls.split(' ').map(x=>x.split(':')).find(x=>+x[0]===n); if(m){ void e.offsetWidth; e.classList.add(m[1]); } });
+  document.querySelectorAll('.upm-st').forEach((b,k)=>{ b.classList.toggle('act',k===i); b.classList.toggle('done',k<i); b.classList.remove('run'); if(k===i&&UPM.play){ void b.offsetWidth; b.classList.add('run'); } });
+  const tg=document.getElementById(UPM_TGT[i]), cur=document.getElementById('upmCur');
+  if(tg&&cur){ const a=win.getBoundingClientRect(), r=tg.getBoundingClientRect(); cur.style.left=(r.left-a.left+r.width*.5)+'px'; cur.style.top=(r.top-a.top+r.height*.4)+'px'; }
+  upmStart(); }
+function upmStart(){ clearInterval(UPM.t); if(!UPM.play) return; UPM.t=setInterval(()=>{ if(!document.getElementById('upm')){ clearInterval(UPM.t); return; } upmGo((UPM.s+1)%6); },4200); }
+function upmToggle(){ UPM.play=!UPM.play; const b=document.getElementById('upmPP'); if(b) b.textContent=UPM.play?'⏸ หยุด':'▶ เล่น'; if(!UPM.play) clearInterval(UPM.t); upmGo(UPM.s); }
 async function updRender(){ const box=$('#updBox'); if(!box) return;
   if(MODE!=='gas'){ box.innerHTML='<div class="muted">ใช้ได้เมื่อเปิดผ่าน Web app</div>'; return; }
   let r; try{ r=await gasCall('apiUpdateInfo',Store.token);
@@ -1879,19 +1996,24 @@ async function updRender(){ const box=$('#updBox'); if(!box) return;
     r.editor=r.editor||['https:','','script.google.com','home'].join('/');   /* Code.gs รุ่นเก่ายังไม่ส่งลิงก์มา → เปิดหน้ารวมโปรเจกต์แทน */
     UPD=r; }catch(e){ box.innerHTML=`<div class="qi">ตรวจสอบเวอร์ชันไม่สำเร็จ: ${esc(e.message)}</div>`; return; }
   if(!$('#updBox')) return;
-  const cur=r.current||APP_VERSION, st=(n,t,x)=>`<div class="ucard" style="gap:8px"><div style="display:flex;gap:10px;align-items:center"><span class="badge y" style="font-size:15px">${n}</span><b>${t}</b></div><div style="font-size:14px;line-height:1.7">${x}</div></div>`;
+  const cur=r.current||APP_VERSION;
   box.innerHTML=`<div class="grid g2">
      <div class="ucard"><div class="muted">เวอร์ชันที่ใช้อยู่</div><b style="font-size:26px">${esc(cur)}</b></div>
      <div class="ucard"><div class="muted">เวอร์ชันล่าสุด ${r.date?'· '+esc(r.date):''}</div><b style="font-size:26px;color:${r.newer?'var(--p)':'inherit'}">${esc(r.latest)}</b><span class="badge ${r.newer?'y':''}">${r.newer?'มีเวอร์ชันใหม่':'เป็นเวอร์ชันล่าสุดแล้ว'}</span></div></div>
    ${(r.notes||[]).length?`<div class="card" style="margin-top:14px;padding:12px 16px"><b>มีอะไรใหม่</b><ul style="margin:6px 0 0 18px;padding:0;line-height:1.8">${r.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></div>`:''}
    ${r.warn?`<div class="qi" style="margin-top:14px;background:rgba(239,68,68,.12)">⚠️ <span class="tx">${esc(r.warn.msg)}</span></div>`:''}
    <h3 style="margin:18px 0 10px">วิธีอัปเดต (ประมาณ 2 นาที) — ให้เจ้าของระบบ${r.owner?' ('+esc(r.owner)+')':''} เป็นคนทำ</h3>
-   <div class="grid g3">
-     ${st(1,'คัดลอก Code.gs',`กดปุ่ม แล้วไปที่หน้าแก้โค้ด › คลิกไฟล์ <b>รหัส.gs</b> › Ctrl+A › Ctrl+V<div style="margin-top:8px"><button class="btn pri sm" onclick="updCopy('Code.gs',this)">📋 คัดลอก Code.gs</button> <button class="btn sm" onclick="window.open(UPD.editor,'_blank')">↗ เปิดหน้าแก้โค้ด</button></div>`)}
-     ${st(2,'คัดลอก index.html',`กดปุ่ม › คลิกไฟล์ <b>index.html</b> › Ctrl+A › Ctrl+V › กดบันทึก 💾<div style="margin-top:8px"><button class="btn pri sm" onclick="updCopy('index.html',this)">📋 คัดลอก index.html</button></div>`)}
-     ${st(3,'เผยแพร่เวอร์ชันใหม่',`มุมขวาบน <b>การทำให้ใช้งานได้</b> › <b>จัดการการทำให้ใช้งานได้</b> › ✏️ › เวอร์ชัน: <b>เวอร์ชันใหม่</b> › <b>การทำให้ใช้งานได้</b> · ลิงก์เดิมใช้ต่อได้`)}
-   </div>
-   <div class="muted" style="margin-top:12px;font-size:13px">ข้อมูลในชีตไม่ถูกแตะต้อง · ดูคลิปวิธีอัปเดตและไฟล์ทั้งหมดได้ที่ <a href="${esc(r.center)}" target="_blank">ศูนย์อัปเดต</a></div>`; }
+   <div class="upd-open">
+     <div class="upd-hero"><span class="upd-tag">เริ่มที่นี่</span>
+       <button class="upd-big" onclick="window.open(UPD.editor,'_blank')">↗ เปิดหน้าแก้โค้ด</button>
+       <div class="upd-cap">เปิดหน้าแก้โค้ดของระบบนี้ในแท็บใหม่ แล้วกลับมาหน้านี้เพื่อคัดลอกโค้ดทีละไฟล์ · วางโค้ดทับของเดิมให้ครบทั้ง 2 ไฟล์</div></div>
+     <div class="upd-rows">
+       <div class="upd-row"><div class="h"><i>1</i>คัดลอก Code.gs</div><div class="s">ในหน้าแก้โค้ด คลิกไฟล์ <b>รหัส.gs</b> › Ctrl+A › Ctrl+V</div><div><button class="btn pri sm" onclick="updCopy('Code.gs',this)">📋 คัดลอก Code.gs</button></div></div>
+       <div class="upd-row"><div class="h"><i>2</i>คัดลอก index.html</div><div class="s">คลิกไฟล์ <b>index.html</b> › Ctrl+A › Ctrl+V › กดบันทึก 💾</div><div><button class="btn pri sm" onclick="updCopy('index.html',this)">📋 คัดลอก index.html</button></div></div>
+     </div></div>
+   ${updMockHtml()}
+   <div class="muted" style="margin-top:12px;font-size:13px">ข้อมูลในชีตไม่ถูกแตะต้อง · ดูคลิปวิธีอัปเดตและไฟล์ทั้งหมดได้ที่ <a href="${esc(r.center)}" target="_blank">ศูนย์อัปเดต</a></div>`;
+  UPM.s=0; UPM.play=true; upmGo(0); }
 async function updCopy(f,btn){ const old=btn.textContent; btn.disabled=true; btn.textContent='กำลังดึงโค้ด…';
   try{ const t=await (await fetch(UPD.center+'src/'+f+'?t='+Date.now(),{cache:'no-store'})).text();
     if(t.length<1000) throw new Error('ไฟล์ไม่สมบูรณ์');
