@@ -151,11 +151,11 @@ function apiLogin(username, password, portal){
   }
   const token = Utilities.getUuid();
   CacheService.getScriptCache().put('S_'+token, u.username, SESSION_HOURS*3600);
-  return JSON.stringify({ ok:true, token, user: publicUser_(u), data: loadFor_(u) });
+  return JSON.stringify({ ok:true, token, user: publicUser_(u), data: loadFor_(u), warn: u.role==='Admin' ? deployWarn_() : null });
 }
 function apiResume(token){
   const u = me_(token);
-  return JSON.stringify({ ok:true, user: publicUser_(u), data: loadFor_(u) });
+  return JSON.stringify({ ok:true, user: publicUser_(u), data: loadFor_(u), warn: u.role==='Admin' ? deployWarn_() : null });
 }
 function apiLogout(token){ CacheService.getScriptCache().remove('S_'+token); return '{"ok":true}'; }
 function me_(token){
@@ -559,7 +559,22 @@ function folder_(name, parent){ const it = parent.getFoldersByName(name); return
 function path_(p, dir){ String(p).split('/').map(function(x){return x.trim();}).filter(String).forEach(function(x){ dir = folder_(x, dir); }); return dir; }
 function uniq_(dir, name){ var m = String(name).match(/^(.*?)(\.[^.]*)?$/), b = m[1], ext = m[2]||'', n = name, i = 2;
   while (dir.getFilesByName(n).hasNext()) n = b+' ('+(i++)+')'+ext; return n; }
-function root_(){ return ROOT_FOLDER_ID ? DriveApp.getFolderById(ROOT_FOLDER_ID) : folder_('ระบบนิเทศ-ไฟล์', DriveApp.getRootFolder()); }
+/* ---- โฟลเดอร์เก็บไฟล์: ตรึงด้วย ID ต่อชีต (กันระบบไปใช้โฟลเดอร์ชื่อซ้ำในไดรฟ์ของบัญชีอื่นที่กด deploy) ---- */
+function runAs_(){ try{ return String(Session.getEffectiveUser().getEmail()||'').toLowerCase(); }catch(e){ return ''; } }
+function sheetOwner_(){ try{ const o = DriveApp.getFileById(ss_().getId()).getOwner(); return o ? String(o.getEmail()||'').toLowerCase() : ''; }catch(e){ return ''; } }
+function rootPin_(){ try{ const j = JSON.parse(PropertiesService.getScriptProperties().getProperty('ROOT_PIN')||'null'); return (j && j.sheet===ss_().getId()) ? j : null; }catch(e){ return null; } }
+function deployMsg_(owner, me){ return 'ระบบกำลังทำงานในนามบัญชี '+(me||'อื่น')+' ไม่ใช่เจ้าของระบบ ('+(owner||'-')+') จึงไม่บันทึกไฟล์ เพื่อไม่ให้ไฟล์ไปอยู่ผิดไดรฟ์ — ให้เจ้าของระบบเปิด Apps Script › การทำให้ใช้งานได้ › จัดการการทำให้ใช้งานได้ › ✏️ › เวอร์ชันใหม่ › การทำให้ใช้งานได้'; }
+function root_(){
+  if (ROOT_FOLDER_ID) return DriveApp.getFolderById(ROOT_FOLDER_ID);
+  const pin = rootPin_(), me = runAs_(), owner = sheetOwner_();
+  if (pin){ let f = null; try{ f = DriveApp.getFolderById(pin.id); }catch(e){}
+    if (f && !f.isTrashed()) return f; }
+  if (owner && me && owner!==me) throw new Error(deployMsg_(owner, me));
+  const f = folder_('ระบบนิเทศ-ไฟล์', DriveApp.getRootFolder());
+  PropertiesService.getScriptProperties().setProperty('ROOT_PIN', JSON.stringify({sheet:ss_().getId(), id:f.getId(), owner:me, at:new Date().toISOString()}));
+  return f;
+}
+function deployWarn_(){ const owner = sheetOwner_(), me = runAs_(); return (owner && me && owner!==me) ? {owner:owner, runAs:me, msg:deployMsg_(owner, me)} : null; }
 function apiRootFolderUrl(token){ need_(me_(token),['Admin','Supervisor']); return JSON.stringify({ok:true, url: root_().getUrl()}); }
 
 // payload {filename, mimeType, data(base64), section, sub}
