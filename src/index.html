@@ -349,8 +349,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.15';
+const APP_VERSION = '1.3.16';
 const APP_CHANGELOG = [
+  {v:'1.3.16', d:'12 พ.ย. 2569', n:['อัปเดตระบบในคลิกเดียว: เมนู 🧭 ระบบนิเทศ › 🔄 อัปเดตระบบ ในชีต หรือ ตั้งค่า › 🔄 อัปเดตระบบ (แอดมิน) ระบบดึงโค้ดล่าสุดและเผยแพร่บนลิงก์เดิมให้เอง','ตั้งค่าครั้งแรก: เปิด Google Apps Script API และวางไฟล์ appsscript.json จากศูนย์อัปเดต (ครั้งเดียว)']},
   {v:'1.3.15', d:'12 พ.ย. 2569', n:['เอกสารรหัส (บัญชีครู, รหัสแอดมินโรงเรียน, ตั้งรหัสผ่านรายคน) ที่สร้างซ้ำ จะมี “สร้างครั้งที่ …” ต่อท้ายชื่อไฟล์ ที่หัวเอกสาร และกรอบแจ้งท้ายกระดาษว่ารหัสฉบับก่อนใช้ไม่ได้แล้ว']},
   {v:'1.3.14', d:'12 พ.ย. 2569', n:['ถ้าระบบถูก deploy โดยบัญชีที่ไม่ใช่เจ้าของ Google Sheet ระบบจะไม่บันทึกไฟล์ลง Drive เลย (กันไฟล์เป็นของคนอื่นและกินพื้นที่บัญชีอื่น) และแจ้งให้เจ้าของ deploy ใหม่','หน้าพื้นที่จัดเก็บแสดงอีเมลบัญชีที่ระบบกำลังทำงานอยู่']},
   {v:'1.3.13', d:'12 พ.ย. 2569', n:['โฟลเดอร์เก็บไฟล์ถูกตรึงด้วย ID ของแต่ละระบบ ไม่ไปใช้โฟลเดอร์ชื่อซ้ำในไดรฟ์ของบัญชีอื่น','ถ้ามีคนที่ไม่ใช่เจ้าของระบบกด deploy ระบบจะไม่บันทึกไฟล์ผิดไดรฟ์ และแจ้งเตือนแอดมินตอนเข้าสู่ระบบให้เจ้าของ deploy ใหม่']},
@@ -1757,7 +1758,7 @@ async function tfSave(){ const L=TFB.map(b=>({id:b.id,label:String(b.label||'').
 function rbDoc(id,chk){ const O=roptsOf(RB[RBT],RBT); let off=O.docsOff.filter(x=>x!==id); if(!chk) off.push(id); const n={...O,docsOff:off}; delete n.docs; RB[RBT].opts=n; render(); }
 function rbOpt(k,v){ RB[RBT].opts={...roptsOf(RB[RBT],RBT),[k]:v}; render(); }
 VIEWS.settings = ()=>{
-  const s=Store.settings, si=s.school_info||{}, T=[['rubric','ข้อคำถาม A/B/C'],['tfiles','📤 ช่องอัปโหลดฝั่งครู'],['clear','🧹 ล้างข้อมูล'],['demo','🧪 ข้อมูลจำลอง'],['year','ภาคเรียน/ปีการศึกษา'],['school','สถานศึกษา & คาบเรียน'],['storage','💾 พื้นที่จัดเก็บ'],['export','📤 ส่งออกข้อมูลประเมิน'],['docs','📄 ตัวอย่างเอกสาร'],['theme','ธีมสี'],['dev','ผู้พัฒนา']];
+  const s=Store.settings, si=s.school_info||{}, T=[['rubric','ข้อคำถาม A/B/C'],['tfiles','📤 ช่องอัปโหลดฝั่งครู'],['clear','🧹 ล้างข้อมูล'],['demo','🧪 ข้อมูลจำลอง'],['year','ภาคเรียน/ปีการศึกษา'],['school','สถานศึกษา & คาบเรียน'],['storage','💾 พื้นที่จัดเก็บ'],['export','📤 ส่งออกข้อมูลประเมิน'],['docs','📄 ตัวอย่างเอกสาร'],['theme','ธีมสี'],['update','🔄 อัปเดตระบบ']];
   let body='';
   if(STAB==='rubric'){ if(!RB) RB=JSON.parse(JSON.stringify(s.rubrics||DEFAULT_RUBRICS)); const R=RB[RBT], n=R.cats.reduce((a,c)=>a+c.items.length,0);
     body=`<div class="row" style="margin-bottom:12px">${['A','B','C'].map(t=>`<button class="tab ${RBT===t?'on':''}" onclick="RBT='${t}';render()">แบบ ${t}</button>`).join('')}<span class="sp"></span>
@@ -1827,11 +1828,34 @@ VIEWS.settings = ()=>{
       <div class="pc" style="cursor:default;padding:20px"><h3 style="margin-bottom:8px">🧽 ล้างข้อมูลจำลอง</h3>
        <div class="muted" style="margin-bottom:12px">ขณะนี้มีข้อมูลจำลอง <b>${n}</b> รายการ</div>
        <button class="btn" style="color:var(--bad)" ${n?'':'disabled'} onclick="clearDemo()">🗑 ล้างข้อมูลจำลอง</button></div></div>`; }
-  if(STAB==='dev') body=`<div class="grid g2"><label class="f">ชื่อผู้พัฒนาระบบ (แสดงท้ายทุกหน้าและในรายงาน)<input id="s_dev" value="${esc(s.developer_name||'')}"></label></div>
-    <div class="row" style="margin-top:14px"><span class="sp"></span><button class="btn pri" onclick="saveSet({developer_name:val('s_dev')})">💾 บันทึก</button></div>`;
+  if(STAB==='update') body=`<div id="updBox"><div class="muted">กำลังตรวจสอบเวอร์ชัน…</div></div>`;
   return `<div class="tabs">${T.map(t=>`<div class="tab ${STAB===t[0]?'on':''}" onclick="STAB='${t[0]}';render()">${t[1]}</div>`).join('')}</div><div class="card glass">${body}</div>`;
 };
-AFTER.settings=()=>{ if(STAB==='school') bindDrops({section:'สถานศึกษา',prefix:'logo_'}); if(STAB==='storage') renderUsage(false); };
+AFTER.settings=()=>{ if(STAB==='school') bindDrops({section:'สถานศึกษา',prefix:'logo_'}); if(STAB==='storage') renderUsage(false); if(STAB==='update') updRender(); };
+/* ===== อัปเดตระบบในคลิกเดียว (ทำงานในนามเจ้าของระบบ ผ่าน Apps Script API) ===== */
+async function updRender(){ const box=$('#updBox'); if(!box) return;
+  if(MODE!=='gas'){ box.innerHTML='<div class="muted">ใช้ได้เมื่อเปิดผ่าน Web app</div>'; return; }
+  let r; try{ r=await gasCall('apiUpdateInfo',Store.token); }catch(e){ box.innerHTML=`<div class="qi">ตรวจสอบเวอร์ชันไม่สำเร็จ: ${esc(e.message)}</div>`; return; }
+  if(!$('#updBox')) return;
+  const cur=r.current||APP_VERSION;
+  box.innerHTML=`<div class="grid g2">
+     <div class="ucard"><div class="muted">เวอร์ชันที่ใช้อยู่</div><b style="font-size:26px">${esc(cur)}</b></div>
+     <div class="ucard"><div class="muted">เวอร์ชันล่าสุด ${r.date?'· '+esc(r.date):''}</div><b style="font-size:26px;color:${r.newer?'var(--p)':'inherit'}">${esc(r.latest)}</b><span class="badge ${r.newer?'y':''}">${r.newer?'มีเวอร์ชันใหม่':'เป็นเวอร์ชันล่าสุดแล้ว'}</span></div></div>
+   ${(r.notes||[]).length?`<div class="card" style="margin-top:14px;padding:12px 16px"><b>มีอะไรใหม่</b><ul style="margin:6px 0 0 18px;padding:0;line-height:1.8">${r.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></div>`:''}
+   ${r.warn?`<div class="qi" style="margin-top:14px;background:rgba(239,68,68,.12)">⚠️ <span class="tx">${esc(r.warn.msg)}</span></div>`:''}
+   <div class="row" style="margin-top:16px"><span class="muted" style="font-size:13px">กดแล้วระบบจะดึงโค้ดล่าสุด เขียนทับ และเผยแพร่บนลิงก์เดิมให้อัตโนมัติ (ประมาณ 30 วินาที) ข้อมูลในชีตไม่ถูกแตะต้อง</span><span class="sp"></span>
+     <button class="btn ${r.newer?'pri':''}" ${r.warn?'disabled':''} onclick="updRun()">🔄 ${r.newer?'อัปเดตเป็น '+esc(r.latest):'ติดตั้งซ้ำ'}</button></div>
+   <details style="margin-top:16px"><summary class="muted" style="cursor:pointer">ตั้งค่าครั้งแรก (ถ้ากดแล้วขึ้นว่ายังไม่ได้เปิด API / ยังไม่ได้รับสิทธิ์)</summary>
+     <ol style="line-height:1.9;margin:8px 0 0 18px;padding:0;font-size:14px">
+       <li>เจ้าของระบบเปิด <a href="${['https:','','script.google.com','home','usersettings'].join('/')}" target="_blank">หน้าตั้งค่า Apps Script</a> แล้วเปิดสวิตช์ <b>Google Apps Script API</b></li>
+       <li>ถ้าระบบติดตั้งก่อนเวอร์ชัน 1.3.16: เปิดศูนย์อัปเดต วางไฟล์ <b>appsscript.json</b> ตามคำแนะนำ (ครั้งเดียว) แล้ว deploy ตามปกติ 1 ครั้ง</li>
+       <li>หลังจากนั้น อัปเดตได้จากปุ่มนี้ หรือเมนู <b>🧭 ระบบนิเทศ › 🔄 อัปเดตระบบ</b> ในชีต</li></ol></details>`; }
+async function updRun(){
+  if(!(await SW.confirm('อัปเดตระบบตอนนี้?','ระหว่างอัปเดตประมาณ 30 วินาที ผู้ที่กำลังใช้งานอาจต้องรีเฟรชหน้าเว็บ'))) return;
+  try{ const r=await busy(()=>gasCall('apiSelfUpdate',Store.token));
+    await SW.ok('อัปเดตเรียบร้อย','ระบบเป็นเวอร์ชัน '+r.version+(r.deployed?' · กำลังโหลดหน้าเว็บใหม่':' · '+(r.msg||'')));
+    if(r.deployed&&window.APP_BOOT&&APP_BOOT.url) window.open(APP_BOOT.url,'_top');
+  }catch(e){ SW.err('อัปเดตไม่สำเร็จ',e.message); } }
 /* ===== ตัวอย่างเอกสาร (แอดมินระบบ) ===== */
 const DOC_LIST=[['A','📝','รายงานผลการนิเทศ แบบ A','ศน. สร้างจากประวัติการประเมิน (PDF เก็บใน Drive)'],['B','📘','รายงานผลการนิเทศ แบบ B','ประเมินแผนการจัดการเรียนรู้'],['C','🏫','รายงานผลการนิเทศ แบบ C','ประเมินการเยี่ยมชั้นเรียน'],
   ['result','📄','เอกสารผลการประเมิน (ฉบับครู)','ครูดาวน์โหลดเองเมื่อประเมินเสร็จ · รวมแบบ A/B/C ของภาคเรียน พร้อมสรุปรายด้านและภาพประกอบ'],['sched','🗓️','ตารางการนิเทศ','ศน. สั่งพิมพ์จากเมนูปฏิทินนิเทศ (แนวนอน)'],

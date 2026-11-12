@@ -496,6 +496,8 @@ function onOpen(){
     .addItem('② วิธีเผยแพร่เป็นเว็บแอป', 'showDeployHelp')
     .addItem('③ เปิด / คัดลอกลิงก์เว็บแอป', 'openWebApp')
     .addSeparator()
+    .addItem('🔄 อัปเดตระบบเป็นเวอร์ชันล่าสุด', 'menuSelfUpdate')
+    .addSeparator()
     .addItem('รีเซ็ตรหัสผ่านแอดมิน', 'resetAdminPassword')
     .addToUi();
 }
@@ -552,6 +554,88 @@ function openWebApp(){
    + '<button onclick="var i=document.getElementById(\'u\');i.select();document.execCommand(\'copy\');this.textContent=\'คัดลอกแล้ว ✓\'" style="padding:8px 14px;border-radius:8px;border:1px solid #ccc;background:#fff">คัดลอกลิงก์</button></p>'
    + '<p style="color:#64748b;font-size:12px">เข้าระบบด้วยบัญชีแอดมินที่ตั้งไว้ แล้วเพิ่มโรงเรียน/ครูที่เมนู ข้อมูลโรงเรียน & นำเข้า</p></div>';
   ui.showModalDialog(HtmlService.createHtmlOutput(h).setWidth(460).setHeight(220), 'เว็บแอประบบนิเทศ');
+}
+
+/* ---------------- อัปเดตตัวเอง (Apps Script API) ----------------
+   ดึงโค้ดล่าสุดจากศูนย์อัปเดต (GitHub Pages) → เขียนทับโค้ดโปรเจกต์ → สร้างเวอร์ชันใหม่ → deploy ทับลิงก์เดิม
+   ทำงานในนามเจ้าของระบบเสมอ (กดจากเมนูในชีต หรือปุ่มในหน้าตั้งค่าแอดมิน)
+   ตั้งค่าครั้งแรก: เปิด Google Apps Script API ที่หน้าตั้งค่าผู้ใช้ของ Apps Script + appsscript.json มี oauthScopes ด้านล่าง */
+const UPD_BASE = ['https:', '', 'nonthaphathr.github.io', 'supervision-update', ''].join('/');
+const UPD_API  = ['https:', '', 'script.googleapis.com', 'v1', 'projects', ''].join('/');
+const UPD_SETTINGS_URL = ['https:', '', 'script.google.com', 'home', 'usersettings'].join('/');
+const UPD_SCOPES = ['spreadsheets','drive','script.external_request','userinfo.email','script.container.ui','script.projects','script.deployments']
+  .map(function(s){ return ['https:', '', 'www.googleapis.com', 'auth', s].join('/'); });
+function updFetch_(url){ const r = UrlFetchApp.fetch(url + (url.indexOf('?')<0?'?':'&') + 't=' + Date.now(), {muteHttpExceptions:true});
+  if (r.getResponseCode()!==200) throw new Error('ดึงไฟล์จากศูนย์อัปเดตไม่สำเร็จ ('+r.getResponseCode()+')'); return r.getContentText(); }
+function updApi_(method, path, body){
+  const o = {method:method, headers:{Authorization:'Bearer '+ScriptApp.getOAuthToken()}, muteHttpExceptions:true};
+  if (body){ o.contentType = 'application/json'; o.payload = JSON.stringify(body); }
+  const r = UrlFetchApp.fetch(UPD_API+path, o), c = r.getResponseCode(), t = r.getContentText();
+  if (c>=300){ let m = t; try{ m = JSON.parse(t).error.message; }catch(e){}
+    if (/Apps Script API|has not enabled|not been used/i.test(m)) throw new Error('UPD_API_OFF');
+    if (c===403 || /scope|insufficient|PERMISSION/i.test(m)) throw new Error('UPD_SCOPE');
+    throw new Error('Apps Script API '+c+': '+m); }
+  return t ? JSON.parse(t) : {};
+}
+function updCurrentVersion_(){ try{ const m = HtmlService.createHtmlOutputFromFile('index').getContent().match(/APP_VERSION = '([0-9.]+)'/); return m?m[1]:''; }catch(e){ return ''; } }
+function updLatest_(){ return JSON.parse(updFetch_(UPD_BASE+'version.json')); }
+function updNewer_(a, b){ const x=String(a||'0').split('.').map(Number), y=String(b||'0').split('.').map(Number);
+  for (let i=0;i<Math.max(x.length,y.length);i++){ const d=(x[i]||0)-(y[i]||0); if (d) return d>0; } return false; }
+function selfUpdate_(){
+  const owner = sheetOwner_(), me = runAs_();
+  if (owner && me && owner!==me) throw new Error('ต้องให้เจ้าของระบบ ('+owner+') เป็นคนกดอัปเดต ตอนนี้ระบบทำงานในนาม '+me);
+  const lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try{
+    const v = updLatest_(), gs = updFetch_(UPD_BASE+'src/Code.gs'), html = updFetch_(UPD_BASE+'src/index.html');
+    if (gs.indexOf('function doGet')<0 || html.indexOf('APP_VERSION')<0 || html.indexOf('appEndOfFile')<0) throw new Error('ไฟล์จากศูนย์อัปเดตไม่สมบูรณ์ ลองใหม่อีกครั้ง');
+    const id = ScriptApp.getScriptId(), cur = updApi_('get', id+'/content');
+    let hasGs=false, hasHtml=false;
+    const files = (cur.files||[]).map(function(f){
+      if (f.type==='SERVER_JS' && f.name==='Code'){ hasGs=true; return {name:f.name, type:f.type, source:gs}; }
+      if (f.type==='HTML' && f.name==='index'){ hasHtml=true; return {name:f.name, type:f.type, source:html}; }
+      if (f.type==='JSON' && f.name==='appsscript'){ const m = JSON.parse(f.source||'{}'), s = m.oauthScopes||[];
+        UPD_SCOPES.forEach(function(x){ if (s.indexOf(x)<0) s.push(x); }); m.oauthScopes = s;
+        return {name:f.name, type:f.type, source:JSON.stringify(m, null, 2)}; }
+      return {name:f.name, type:f.type, source:f.source};
+    });
+    if (!hasGs || !hasHtml) throw new Error('ไม่พบไฟล์ Code.gs หรือ index.html ในโปรเจกต์');
+    updApi_('put', id+'/content', {files:files});
+    const ver = updApi_('post', id+'/versions', {description:'อัปเดตเป็น v'+v.version});
+    const deps = (updApi_('get', id+'/deployments').deployments||[]).filter(function(d){
+      return d.deploymentConfig && d.deploymentConfig.versionNumber && (d.entryPoints||[]).some(function(e){ return e.entryPointType==='WEB_APP'; }); });
+    let url = ''; try{ url = ScriptApp.getService().getUrl()||''; }catch(e){}
+    let dep = deps.filter(function(d){ return url && url.indexOf(d.deploymentId)>=0; })[0];
+    if (!dep) dep = deps.sort(function(a,b){ return String(b.updateTime||'').localeCompare(String(a.updateTime||'')); })[0];
+    if (!dep) return {ok:true, version:v.version, deployed:false, msg:'อัปเดตโค้ดแล้ว แต่ยังไม่พบการเผยแพร่เว็บแอป ให้ทำตามเมนู ② ก่อน'};
+    updApi_('put', id+'/deployments/'+dep.deploymentId, {deploymentConfig:{scriptId:id, versionNumber:ver.versionNumber, manifestFileName:'appsscript', description:'v'+v.version}});
+    return {ok:true, version:v.version, deployed:true, deployVersion:ver.versionNumber};
+  } finally { lock.releaseLock(); }
+}
+function updErrText_(e){ const m = String(e && e.message || e);
+  if (m==='UPD_API_OFF') return 'ยังไม่ได้เปิด Google Apps Script API — เปิดที่ '+UPD_SETTINGS_URL+' (ทำครั้งเดียว) แล้วกดอัปเดตอีกครั้ง';
+  if (m==='UPD_SCOPE') return 'โปรเจกต์ยังไม่ได้รับสิทธิ์จัดการโค้ด/การเผยแพร่ — ให้เจ้าของวาง appsscript.json จากศูนย์อัปเดต แล้วกดอนุญาตสิทธิ์ (ทำครั้งเดียว)';
+  return m; }
+function apiUpdateInfo(token){ need_(me_(token),['Admin']); const v = updLatest_();
+  return JSON.stringify({ok:true, latest:v.version, date:v.date||'', notes:v.notes||[], current:updCurrentVersion_(), newer:updNewer_(v.version, updCurrentVersion_()), warn:deployWarn_()}); }
+function apiSelfUpdate(token){ need_(me_(token),['Admin']);
+  try{ return JSON.stringify(selfUpdate_()); }catch(e){ throw new Error(updErrText_(e)); } }
+function menuSelfUpdate(){
+  const ui = SpreadsheetApp.getUi();
+  let v; try{ v = updLatest_(); }catch(e){ ui.alert('ตรวจสอบเวอร์ชันไม่สำเร็จ', String(e.message||e), ui.ButtonSet.OK); return; }
+  const cur = updCurrentVersion_();
+  const msg = 'เวอร์ชันที่ใช้อยู่: '+(cur||'-')+'\nเวอร์ชันล่าสุด: '+v.version+(v.date?' ('+v.date+')':'')+'\n\n'+(v.notes||[]).slice(0,5).map(function(n){ return '• '+n; }).join('\n')
+    + '\n\n'+(updNewer_(v.version, cur)?'กด OK เพื่ออัปเดตและเผยแพร่เวอร์ชันใหม่บนลิงก์เดิม':'ระบบเป็นเวอร์ชันล่าสุดแล้ว — กด OK หากต้องการติดตั้งซ้ำ');
+  if (ui.alert('🔄 อัปเดตระบบ', msg, ui.ButtonSet.OK_CANCEL)!==ui.Button.OK) return;
+  try{ const r = selfUpdate_();
+    ui.alert('อัปเดตเรียบร้อย ✅', 'ระบบเป็นเวอร์ชัน '+r.version+(r.deployed?' และเผยแพร่บนลิงก์เดิมแล้ว\nผู้ใช้กดรีเฟรชหน้าเว็บก็จะได้เวอร์ชันใหม่':'\n'+(r.msg||'')), ui.ButtonSet.OK);
+  }catch(e){ const t = updErrText_(e);
+    if (String(e.message)==='UPD_API_OFF'){
+      const h = '<div style="font-family:Sarabun,Tahoma,sans-serif;font-size:14px;line-height:1.7">'
+        + '<p style="margin-top:0">ต้องเปิด <b>Google Apps Script API</b> ก่อน (ทำครั้งเดียว)</p><ol style="padding-left:20px">'
+        + '<li>กดปุ่มด้านล่าง (เปิดแท็บใหม่)</li><li>เปิดสวิตช์ <b>Google Apps Script API</b> ให้เป็น <b>เปิด</b></li><li>กลับมาที่ชีตนี้ แล้วกดเมนู 🔄 อัปเดตระบบ อีกครั้ง</li></ol>'
+        + '<p><a href="'+UPD_SETTINGS_URL+'" target="_blank" style="background:#F97316;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none">เปิดหน้าตั้งค่า Apps Script API</a></p></div>';
+      ui.showModalDialog(HtmlService.createHtmlOutput(h).setWidth(440).setHeight(260), 'ตั้งค่าครั้งแรก');
+    } else ui.alert('อัปเดตไม่สำเร็จ', t, ui.ButtonSet.OK); }
 }
 
 /* ---------------- Drive ---------------- */
