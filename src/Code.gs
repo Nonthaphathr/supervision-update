@@ -581,7 +581,16 @@ function updCurrentVersion_(){ try{ const m = HtmlService.createHtmlOutputFromFi
 function updLatest_(){ return JSON.parse(updFetch_(UPD_BASE+'version.json')); }
 function updNewer_(a, b){ const x=String(a||'0').split('.').map(Number), y=String(b||'0').split('.').map(Number);
   for (let i=0;i<Math.max(x.length,y.length);i++){ const d=(x[i]||0)-(y[i]||0); if (d) return d>0; } return false; }
+/* ตรวจว่าเจ้าของอนุญาตสิทธิ์จัดการโปรเจกต์/การเผยแพร่แล้วหรือยัง (Google ให้เลือกอนุญาตทีละสิทธิ์ได้ จึงอาจขาดบางข้อ) */
+function updAuthCheck_(){
+  try{ const ai = ScriptApp.getAuthorizationInfo(ScriptApp.AuthMode.FULL, UPD_SCOPES);
+    if (ai.getAuthorizationStatus()===ScriptApp.AuthorizationStatus.REQUIRED){
+      let miss = []; try{ const have = ai.getAuthorizedScopes()||[]; miss = UPD_SCOPES.filter(function(s){ return have.indexOf(s)<0; }); }catch(e){}
+      throw new Error('UPD_SCOPE::ยังขาดสิทธิ์ '+(miss.map(function(s){ return s.split('/').pop(); }).join(', ')||'บางรายการ')+' · เปิดลิงก์นี้เพื่ออนุญาต: '+ai.getAuthorizationUrl()); }
+  }catch(e){ if (String(e.message).indexOf('UPD_SCOPE')===0) throw e; }
+}
 function selfUpdate_(){
+  updAuthCheck_();
   const owner = sheetOwner_(), me = runAs_();
   if (owner && me && owner!==me) throw new Error('ต้องให้เจ้าของระบบ ('+owner+') เป็นคนกดอัปเดต ตอนนี้ระบบทำงานในนาม '+me);
   const lock = LockService.getScriptLock(); lock.waitLock(30000);
@@ -613,14 +622,17 @@ function selfUpdate_(){
 }
 function updErrText_(e){ const m = String(e && e.message || e), k = m.split('::')[0], d = m.split('::')[1] || '';
   if (k==='UPD_API_OFF') return 'ยังไม่ได้เปิด Google Apps Script API — เปิดที่ '+UPD_SETTINGS_URL+' (ทำครั้งเดียว) แล้วกดอัปเดตอีกครั้ง'+(d?' [รายละเอียด: '+d+']':'');
-  if (k==='UPD_SCOPE') return 'ยังไม่ได้อนุญาตสิทธิ์ใหม่ — ให้เจ้าของเปิด Google Sheet ของระบบ › เมนู 🧭 ระบบนิเทศ › 🔄 อัปเดตระบบ แล้วกด "อนุญาต" ตามที่ Google ถาม (ทำครั้งเดียว)'+(d?' [รายละเอียด: '+d+']':'');
+  if (k==='UPD_SCOPE') return 'ยังไม่ได้อนุญาตสิทธิ์ "จัดการโปรเจกต์ Apps Script / การเผยแพร่" — ให้เจ้าของอนุญาต (ทำครั้งเดียว) ตอนหน้าอนุญาตของ Google ขึ้น ให้ติ๊ก "เลือกทั้งหมด" ก่อนกดดำเนินการต่อ'+(d?' [รายละเอียด: '+d+']':'');
   return m; }
+/* เรียกจากหน้าแก้โค้ด (เลือกฟังก์ชันนี้ › เรียกใช้) เพื่อขอสิทธิ์อัปเดตครบทุกข้อ */
+function authorizeUpdate(){ ScriptApp.requireScopes(ScriptApp.AuthMode.FULL, UPD_SCOPES); ScriptApp.getOAuthToken(); Logger.log('อนุญาตสิทธิ์อัปเดตครบแล้ว ✅ เวอร์ชันล่าสุดบนศูนย์อัปเดต: '+updLatest_().version); }
 function apiUpdateInfo(token){ need_(me_(token),['Admin']); const v = updLatest_();
   return JSON.stringify({ok:true, latest:v.version, date:v.date||'', notes:v.notes||[], current:updCurrentVersion_(), newer:updNewer_(v.version, updCurrentVersion_()), warn:deployWarn_()}); }
 function apiSelfUpdate(token){ need_(me_(token),['Admin']);
   try{ return JSON.stringify(selfUpdate_()); }catch(e){ throw new Error(updErrText_(e)); } }
 function menuSelfUpdate(){
   const ui = SpreadsheetApp.getUi();
+  try{ ScriptApp.requireScopes(ScriptApp.AuthMode.FULL, UPD_SCOPES); }catch(e){}
   let v; try{ v = updLatest_(); }catch(e){ ui.alert('ตรวจสอบเวอร์ชันไม่สำเร็จ', String(e.message||e), ui.ButtonSet.OK); return; }
   const cur = updCurrentVersion_();
   const msg = 'เวอร์ชันที่ใช้อยู่: '+(cur||'-')+'\nเวอร์ชันล่าสุด: '+v.version+(v.date?' ('+v.date+')':'')+'\n\n'+(v.notes||[]).slice(0,5).map(function(n){ return '• '+n; }).join('\n')
@@ -635,6 +647,13 @@ function menuSelfUpdate(){
         + '<li>กดปุ่มด้านล่าง (เปิดแท็บใหม่)</li><li>เปิดสวิตช์ <b>Google Apps Script API</b> ให้เป็น <b>เปิด</b></li><li>กลับมาที่ชีตนี้ แล้วกดเมนู 🔄 อัปเดตระบบ อีกครั้ง</li></ol>'
         + '<p><a href="'+UPD_SETTINGS_URL+'" target="_blank" style="background:#F97316;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none">เปิดหน้าตั้งค่า Apps Script API</a></p></div>';
       ui.showModalDialog(HtmlService.createHtmlOutput(h).setWidth(440).setHeight(260), 'ตั้งค่าครั้งแรก');
+    } else if (String(e.message).indexOf('UPD_SCOPE')===0 && /https:\S+/.test(String(e.message))){
+      const link = String(e.message).match(/https:\S+/)[0];
+      const h = '<div style="font-family:Sarabun,Tahoma,sans-serif;font-size:14px;line-height:1.7">'
+        + '<p style="margin-top:0">ต้องอนุญาตสิทธิ์ <b>จัดการโปรเจกต์ Apps Script และการเผยแพร่</b> (ทำครั้งเดียว)</p><ol style="padding-left:20px">'
+        + '<li>กดปุ่มด้านล่าง (เปิดแท็บใหม่) เลือกบัญชีเจ้าของระบบ</li><li>ถ้ามีคำเตือน กด <b>ขั้นสูง › ไปที่โครงการ</b></li><li>ติ๊ก <b>เลือกทั้งหมด</b> แล้วกด <b>ดำเนินการต่อ</b></li><li>กลับมาที่ชีต กดเมนู 🔄 อัปเดตระบบ อีกครั้ง</li></ol>'
+        + '<p><a href="'+link.replace(/"/g,'&quot;')+'" target="_blank" style="background:#F97316;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none">อนุญาตสิทธิ์</a></p></div>';
+      ui.showModalDialog(HtmlService.createHtmlOutput(h).setWidth(460).setHeight(300), 'อนุญาตสิทธิ์อัปเดต');
     } else ui.alert('อัปเดตไม่สำเร็จ', t, ui.ButtonSet.OK); }
 }
 
