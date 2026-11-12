@@ -496,7 +496,7 @@ function onOpen(){
     .addItem('② วิธีเผยแพร่เป็นเว็บแอป', 'showDeployHelp')
     .addItem('③ เปิด / คัดลอกลิงก์เว็บแอป', 'openWebApp')
     .addSeparator()
-    .addItem('🔄 อัปเดตระบบเป็นเวอร์ชันล่าสุด', 'menuSelfUpdate')
+    .addItem('🔄 ตรวจเวอร์ชัน / วิธีอัปเดตระบบ', 'menuSelfUpdate')
     .addSeparator()
     .addItem('รีเซ็ตรหัสผ่านแอดมิน', 'resetAdminPassword')
     .addToUi();
@@ -556,110 +556,34 @@ function openWebApp(){
   ui.showModalDialog(HtmlService.createHtmlOutput(h).setWidth(460).setHeight(220), 'เว็บแอประบบนิเทศ');
 }
 
-/* ---------------- อัปเดตตัวเอง (Apps Script API) ----------------
-   ดึงโค้ดล่าสุดจากศูนย์อัปเดต (GitHub Pages) → เขียนทับโค้ดโปรเจกต์ → สร้างเวอร์ชันใหม่ → deploy ทับลิงก์เดิม
-   ทำงานในนามเจ้าของระบบเสมอ (กดจากเมนูในชีต หรือปุ่มในหน้าตั้งค่าแอดมิน)
-   ตั้งค่าครั้งแรก: เปิด Google Apps Script API ที่หน้าตั้งค่าผู้ใช้ของ Apps Script + appsscript.json มี oauthScopes ด้านล่าง */
+/* ---------------- ตรวจเวอร์ชัน / อัปเดตระบบ ----------------
+   ดูเวอร์ชันล่าสุดจากศูนย์อัปเดต (GitHub Pages) · การอัปเดตทำโดยเจ้าของระบบ: วางโค้ด 2 ไฟล์ แล้ว deploy เวอร์ชันใหม่ (ระบบจึงทำงานในนามเจ้าของเสมอ) */
 const UPD_BASE = ['https:', '', 'nonthaphathr.github.io', 'supervision-update', ''].join('/');
-const UPD_API  = ['https:', '', 'script.googleapis.com', 'v1', 'projects', ''].join('/');
-const UPD_SETTINGS_URL = ['https:', '', 'script.google.com', 'home', 'usersettings'].join('/');
-const UPD_SCOPES = ['spreadsheets','drive','script.external_request','userinfo.email','script.container.ui','script.projects','script.deployments']
-  .map(function(s){ return ['https:', '', 'www.googleapis.com', 'auth', s].join('/'); });
 function updFetch_(url){ const r = UrlFetchApp.fetch(url + (url.indexOf('?')<0?'?':'&') + 't=' + Date.now(), {muteHttpExceptions:true});
-  if (r.getResponseCode()!==200) throw new Error('ดึงไฟล์จากศูนย์อัปเดตไม่สำเร็จ ('+r.getResponseCode()+')'); return r.getContentText(); }
-function updApi_(method, path, body){
-  const o = {method:method, headers:{Authorization:'Bearer '+ScriptApp.getOAuthToken()}, muteHttpExceptions:true};
-  if (body){ o.contentType = 'application/json'; o.payload = JSON.stringify(body); }
-  const r = UrlFetchApp.fetch(UPD_API+path, o), c = r.getResponseCode(), t = r.getContentText();
-  if (c>=300){ let m = t; try{ m = JSON.parse(t).error.message; }catch(e){}
-    if (/Apps Script API|has not enabled|not been used/i.test(m)) throw new Error('UPD_API_OFF::'+c+' '+m);
-    if (c===401 || c===403 || /scope|insufficient|PERMISSION/i.test(m)) throw new Error('UPD_SCOPE::'+c+' '+m);
-    throw new Error('Apps Script API '+c+': '+m); }
-  return t ? JSON.parse(t) : {};
-}
+  if (r.getResponseCode()!==200) throw new Error('ดึงข้อมูลจากศูนย์อัปเดตไม่สำเร็จ ('+r.getResponseCode()+')'); return r.getContentText(); }
 function updCurrentVersion_(){ try{ const m = HtmlService.createHtmlOutputFromFile('index').getContent().match(/APP_VERSION = '([0-9.]+)'/); return m?m[1]:''; }catch(e){ return ''; } }
 function updLatest_(){ return JSON.parse(updFetch_(UPD_BASE+'version.json')); }
 function updNewer_(a, b){ const x=String(a||'0').split('.').map(Number), y=String(b||'0').split('.').map(Number);
   for (let i=0;i<Math.max(x.length,y.length);i++){ const d=(x[i]||0)-(y[i]||0); if (d) return d>0; } return false; }
-/* ตรวจว่าเจ้าของอนุญาตสิทธิ์จัดการโปรเจกต์/การเผยแพร่แล้วหรือยัง (Google ให้เลือกอนุญาตทีละสิทธิ์ได้ จึงอาจขาดบางข้อ) */
-function updAuthCheck_(){
-  try{ const ai = ScriptApp.getAuthorizationInfo(ScriptApp.AuthMode.FULL, UPD_SCOPES);
-    if (ai.getAuthorizationStatus()===ScriptApp.AuthorizationStatus.REQUIRED){
-      let miss = []; try{ const have = ai.getAuthorizedScopes()||[]; miss = UPD_SCOPES.filter(function(s){ return have.indexOf(s)<0; }); }catch(e){}
-      throw new Error('UPD_SCOPE::ยังขาดสิทธิ์ '+(miss.map(function(s){ return s.split('/').pop(); }).join(', ')||'บางรายการ')+' · เปิดลิงก์นี้เพื่ออนุญาต: '+ai.getAuthorizationUrl()); }
-  }catch(e){ if (String(e.message).indexOf('UPD_SCOPE')===0) throw e; }
-}
-function selfUpdate_(){
-  updAuthCheck_();
-  const owner = sheetOwner_(), me = runAs_();
-  if (owner && me && owner!==me) throw new Error('ต้องให้เจ้าของระบบ ('+owner+') เป็นคนกดอัปเดต ตอนนี้ระบบทำงานในนาม '+me);
-  const lock = LockService.getScriptLock(); lock.waitLock(30000);
-  try{
-    const v = updLatest_(), gs = updFetch_(UPD_BASE+'src/Code.gs'), html = updFetch_(UPD_BASE+'src/index.html');
-    if (gs.indexOf('function doGet')<0 || html.indexOf('APP_VERSION')<0 || html.indexOf('appEndOfFile')<0) throw new Error('ไฟล์จากศูนย์อัปเดตไม่สมบูรณ์ ลองใหม่อีกครั้ง');
-    const id = ScriptApp.getScriptId(), cur = updApi_('get', id+'/content');
-    let hasGs=false, hasHtml=false;
-    const files = (cur.files||[]).map(function(f){
-      if (f.type==='SERVER_JS' && f.name==='Code'){ hasGs=true; return {name:f.name, type:f.type, source:gs}; }
-      if (f.type==='HTML' && f.name==='index'){ hasHtml=true; return {name:f.name, type:f.type, source:html}; }
-      if (f.type==='JSON' && f.name==='appsscript'){ const m = JSON.parse(f.source||'{}'), s = m.oauthScopes||[];
-        UPD_SCOPES.forEach(function(x){ if (s.indexOf(x)<0) s.push(x); }); m.oauthScopes = s;
-        return {name:f.name, type:f.type, source:JSON.stringify(m, null, 2)}; }
-      return {name:f.name, type:f.type, source:f.source};
-    });
-    if (!hasGs || !hasHtml) throw new Error('ไม่พบไฟล์ Code.gs หรือ index.html ในโปรเจกต์');
-    updApi_('put', id+'/content', {files:files});
-    const ver = updApi_('post', id+'/versions', {description:'อัปเดตเป็น v'+v.version});
-    const deps = (updApi_('get', id+'/deployments').deployments||[]).filter(function(d){
-      return d.deploymentConfig && d.deploymentConfig.versionNumber && (d.entryPoints||[]).some(function(e){ return e.entryPointType==='WEB_APP'; }); });
-    let url = ''; try{ url = ScriptApp.getService().getUrl()||''; }catch(e){}
-    let dep = deps.filter(function(d){ return url && url.indexOf(d.deploymentId)>=0; })[0];
-    if (!dep) dep = deps.sort(function(a,b){ return String(b.updateTime||'').localeCompare(String(a.updateTime||'')); })[0];
-    if (!dep) return {ok:true, version:v.version, deployed:false, msg:'อัปเดตโค้ดแล้ว แต่ยังไม่พบการเผยแพร่เว็บแอป ให้ทำตามเมนู ② ก่อน'};
-    updApi_('put', id+'/deployments/'+dep.deploymentId, {deploymentConfig:{scriptId:id, versionNumber:ver.versionNumber, manifestFileName:'appsscript', description:'v'+v.version}});
-    return {ok:true, version:v.version, deployed:true, deployVersion:ver.versionNumber};
-  } finally { lock.releaseLock(); }
-}
-function updErrText_(e){ const m = String(e && e.message || e), k = m.split('::')[0], d = m.split('::')[1] || '';
-  if (k==='UPD_API_OFF') return 'ยังไม่ได้เปิด Google Apps Script API — เปิดที่ '+UPD_SETTINGS_URL+' (ทำครั้งเดียว) แล้วกดอัปเดตอีกครั้ง'+(d?' [รายละเอียด: '+d+']':'');
-  if (k==='UPD_SCOPE') return 'ยังไม่ได้อนุญาตสิทธิ์ "จัดการโปรเจกต์ Apps Script / การเผยแพร่" — ให้เจ้าของอนุญาต (ทำครั้งเดียว) ตอนหน้าอนุญาตของ Google ขึ้น ให้ติ๊ก "เลือกทั้งหมด" ก่อนกดดำเนินการต่อ'+(d?' [รายละเอียด: '+d+']':'');
-  return m; }
-/* เรียกจากหน้าแก้โค้ด (เลือกฟังก์ชันนี้ › เรียกใช้) เพื่อขอสิทธิ์อัปเดตครบทุกข้อ */
-/* ตรวจการเชื่อมต่อ Apps Script API (เลือกฟังก์ชันนี้ › เรียกใช้ › ดูบันทึกการดำเนินการ) */
-function checkUpdateApi(){ Logger.log('บัญชีที่รัน: '+runAs_()+' · เจ้าของชีต: '+sheetOwner_());
-  try{ const c = updApi_('get', ScriptApp.getScriptId()+'/content'); Logger.log('เชื่อมต่อ Apps Script API ได้ ✅ ไฟล์ในโปรเจกต์: '+(c.files||[]).map(function(f){ return f.name; }).join(', ')); }
-  catch(e){ Logger.log('เชื่อมต่อไม่ได้ ❌ '+e.message); } }
-function authorizeUpdate(){ ScriptApp.requireScopes(ScriptApp.AuthMode.FULL, UPD_SCOPES); ScriptApp.getOAuthToken(); Logger.log('อนุญาตสิทธิ์อัปเดตครบแล้ว ✅ เวอร์ชันล่าสุดบนศูนย์อัปเดต: '+updLatest_().version); }
-function apiUpdateInfo(token){ need_(me_(token),['Admin']); const v = updLatest_();
-  return JSON.stringify({ok:true, latest:v.version, date:v.date||'', notes:v.notes||[], current:updCurrentVersion_(), newer:updNewer_(v.version, updCurrentVersion_()), warn:deployWarn_()}); }
-function apiSelfUpdate(token){ need_(me_(token),['Admin']);
-  try{ return JSON.stringify(selfUpdate_()); }catch(e){ throw new Error(updErrText_(e)); } }
+function updEditorUrl_(){ return ['https:', '', 'script.google.com', 'home', 'projects', ScriptApp.getScriptId(), 'edit'].join('/'); }
+function apiUpdateInfo(token){ need_(me_(token),['Admin']); const v = updLatest_(), cur = updCurrentVersion_();
+  return JSON.stringify({ok:true, latest:v.version, date:v.date||'', notes:v.notes||[], current:cur, newer:updNewer_(v.version, cur), warn:deployWarn_(),
+    center:UPD_BASE, editor:updEditorUrl_(), owner:sheetOwner_()}); }
 function menuSelfUpdate(){
   const ui = SpreadsheetApp.getUi();
-  try{ ScriptApp.requireScopes(ScriptApp.AuthMode.FULL, UPD_SCOPES); }catch(e){}
   let v; try{ v = updLatest_(); }catch(e){ ui.alert('ตรวจสอบเวอร์ชันไม่สำเร็จ', String(e.message||e), ui.ButtonSet.OK); return; }
-  const cur = updCurrentVersion_();
-  const msg = 'เวอร์ชันที่ใช้อยู่: '+(cur||'-')+'\nเวอร์ชันล่าสุด: '+v.version+(v.date?' ('+v.date+')':'')+'\n\n'+(v.notes||[]).slice(0,5).map(function(n){ return '• '+n; }).join('\n')
-    + '\n\n'+(updNewer_(v.version, cur)?'กด OK เพื่ออัปเดตและเผยแพร่เวอร์ชันใหม่บนลิงก์เดิม':'ระบบเป็นเวอร์ชันล่าสุดแล้ว — กด OK หากต้องการติดตั้งซ้ำ');
-  if (ui.alert('🔄 อัปเดตระบบ', msg, ui.ButtonSet.OK_CANCEL)!==ui.Button.OK) return;
-  try{ const r = selfUpdate_();
-    ui.alert('อัปเดตเรียบร้อย ✅', 'ระบบเป็นเวอร์ชัน '+r.version+(r.deployed?' และเผยแพร่บนลิงก์เดิมแล้ว\nผู้ใช้กดรีเฟรชหน้าเว็บก็จะได้เวอร์ชันใหม่':'\n'+(r.msg||'')), ui.ButtonSet.OK);
-  }catch(e){ const t = updErrText_(e);
-    if (String(e.message).indexOf('UPD_API_OFF')===0){
-      const h = '<div style="font-family:Sarabun,Tahoma,sans-serif;font-size:14px;line-height:1.7">'
-        + '<p style="margin-top:0">ต้องเปิด <b>Google Apps Script API</b> ก่อน (ทำครั้งเดียว)</p><ol style="padding-left:20px">'
-        + '<li>กดปุ่มด้านล่าง (เปิดแท็บใหม่)</li><li>เปิดสวิตช์ <b>Google Apps Script API</b> ให้เป็น <b>เปิด</b></li><li>กลับมาที่ชีตนี้ แล้วกดเมนู 🔄 อัปเดตระบบ อีกครั้ง</li></ol>'
-        + '<p><a href="'+UPD_SETTINGS_URL+'" target="_blank" style="background:#F97316;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none">เปิดหน้าตั้งค่า Apps Script API</a></p>'
-        + '<p style="font-size:12px;color:#64748b">ตรวจว่าเปิดสวิตช์ด้วยบัญชี <b>'+runAs_()+'</b> (ดูรูปโปรไฟล์มุมขวาบนของหน้าตั้งค่า)<br>รายละเอียดจาก Google: '+String(e.message).split('::')[1].replace(/</g,'&lt;').slice(0,400)+'</p></div>';
-      ui.showModalDialog(HtmlService.createHtmlOutput(h).setWidth(480).setHeight(380), 'ตั้งค่าครั้งแรก');
-    } else if (String(e.message).indexOf('UPD_SCOPE')===0 && /https:\S+/.test(String(e.message))){
-      const link = String(e.message).match(/https:\S+/)[0];
-      const h = '<div style="font-family:Sarabun,Tahoma,sans-serif;font-size:14px;line-height:1.7">'
-        + '<p style="margin-top:0">ต้องอนุญาตสิทธิ์ <b>จัดการโปรเจกต์ Apps Script และการเผยแพร่</b> (ทำครั้งเดียว)</p><ol style="padding-left:20px">'
-        + '<li>กดปุ่มด้านล่าง (เปิดแท็บใหม่) เลือกบัญชีเจ้าของระบบ</li><li>ถ้ามีคำเตือน กด <b>ขั้นสูง › ไปที่โครงการ</b></li><li>ติ๊ก <b>เลือกทั้งหมด</b> แล้วกด <b>ดำเนินการต่อ</b></li><li>กลับมาที่ชีต กดเมนู 🔄 อัปเดตระบบ อีกครั้ง</li></ol>'
-        + '<p><a href="'+link.replace(/"/g,'&quot;')+'" target="_blank" style="background:#F97316;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none">อนุญาตสิทธิ์</a></p></div>';
-      ui.showModalDialog(HtmlService.createHtmlOutput(h).setWidth(460).setHeight(300), 'อนุญาตสิทธิ์อัปเดต');
-    } else ui.alert('อัปเดตไม่สำเร็จ', t, ui.ButtonSet.OK); }
+  const cur = updCurrentVersion_(), nw = updNewer_(v.version, cur), esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); };
+  const btn = function(href, t, pri){ return '<a href="'+href+'" target="_blank" style="display:inline-block;margin:4px 6px 4px 0;padding:8px 14px;border-radius:8px;text-decoration:none;'+(pri?'background:#F97316;color:#fff':'border:1px solid #F97316;color:#C2410C')+'">'+t+'</a>'; };
+  const h = '<div style="font-family:Sarabun,Tahoma,sans-serif;font-size:14px;line-height:1.7;color:#1e293b">'
+    + '<p style="margin-top:0">ใช้อยู่: <b>'+esc(cur||'-')+'</b> · ล่าสุด: <b style="color:#C2410C">'+esc(v.version)+'</b>'+(nw?' <span style="background:#FEF3C7;padding:1px 8px;border-radius:9px">มีเวอร์ชันใหม่</span>':' ✅ เป็นเวอร์ชันล่าสุดแล้ว')+'</p>'
+    + (v.notes&&v.notes.length?'<ul style="margin:0 0 8px 18px;padding:0">'+v.notes.slice(0,5).map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('')+'</ul>':'')
+    + '<b>วิธีอัปเดต (ประมาณ 2 นาที)</b><ol style="padding-left:20px;margin:4px 0">'
+    + '<li>เปิด <b>ศูนย์อัปเดต</b> › กดคัดลอก <b>Code.gs</b> › ไปที่หน้าแก้โค้ด › คลิกไฟล์ รหัส.gs › Ctrl+A › Ctrl+V</li>'
+    + '<li>ทำแบบเดียวกันกับ <b>index.html</b> แล้วกดบันทึก 💾</li>'
+    + '<li>การทำให้ใช้งานได้ › จัดการการทำให้ใช้งานได้ › ✏️ › เวอร์ชัน: <b>เวอร์ชันใหม่</b> › การทำให้ใช้งานได้</li></ol>'
+    + btn(UPD_BASE, '1) เปิดศูนย์อัปเดต', true) + btn(updEditorUrl_(), '2) เปิดหน้าแก้โค้ด', false)
+    + '<p style="font-size:12px;color:#64748b;margin-bottom:0">ต้องให้เจ้าของไฟล์ชีตนี้เป็นคนกด deploy เพื่อให้ไฟล์ทั้งหมดเก็บในไดรฟ์ของเจ้าของ</p></div>';
+  ui.showModalDialog(HtmlService.createHtmlOutput(h).setWidth(520).setHeight(470), '🔄 อัปเดตระบบ');
 }
 
 /* ---------------- Drive ---------------- */
