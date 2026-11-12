@@ -642,7 +642,8 @@ function menuSelfUpdate(){
 function folder_(name, parent){ const it = parent.getFoldersByName(name); return it.hasNext()?it.next():parent.createFolder(name); }
 function path_(p, dir){ String(p).split('/').map(function(x){return x.trim();}).filter(String).forEach(function(x){ dir = folder_(x, dir); }); return dir; }
 function uniq_(dir, name){ var m = String(name).match(/^(.*?)(\.[^.]*)?$/), b = m[1], ext = m[2]||'', n = name, i = 2;
-  while (dir.getFilesByName(n).hasNext()) n = b+' ('+(i++)+')'+ext; return n; }
+  const taken = function(x){ const it = dir.getFilesByName(x); while (it.hasNext()){ if (!it.next().isTrashed()) return true; } return false; };   /* ไม่นับไฟล์ในถังขยะ → สร้างซ้ำได้ชื่อเดิม */
+  while (taken(n)) n = b+' ('+(i++)+')'+ext; return n; }
 /* ---- โฟลเดอร์เก็บไฟล์: ตรึงด้วย ID ต่อชีต (กันระบบไปใช้โฟลเดอร์ชื่อซ้ำในไดรฟ์ของบัญชีอื่นที่กด deploy) ---- */
 function runAs_(){ try{ return String(Session.getEffectiveUser().getEmail()||'').toLowerCase(); }catch(e){ return ''; } }
 function sheetOwner_(){ try{ const o = DriveApp.getFileById(ss_().getId()).getOwner(); return o ? String(o.getEmail()||'').toLowerCase() : ''; }catch(e){ return ''; } }

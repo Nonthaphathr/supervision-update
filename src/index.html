@@ -349,8 +349,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.16';
+const APP_VERSION = '1.3.17';
 const APP_CHANGELOG = [
+  {v:'1.3.17', d:'12 พ.ย. 2569', n:['ตั้งค่า › ♻️ สร้างเอกสารใหม่: เลือกผลประเมินเดิม (กรองตามปี/ภาค/โรงเรียน/แบบ) แล้วสร้างรายงาน PDF ใหม่ด้วยรูปแบบล่าสุด แทนที่ไฟล์เดิมใน Drive ได้ทีละหลายรายการ','สร้าง PDF ซ้ำได้ชื่อไฟล์เดิม (ไม่เติม (2) ต่อท้าย)']},
   {v:'1.3.16', d:'12 พ.ย. 2569', n:['อัปเดตระบบในคลิกเดียว: เมนู 🧭 ระบบนิเทศ › 🔄 อัปเดตระบบ ในชีต หรือ ตั้งค่า › 🔄 อัปเดตระบบ (แอดมิน) ระบบดึงโค้ดล่าสุดและเผยแพร่บนลิงก์เดิมให้เอง','ตั้งค่าครั้งแรก: เปิด Google Apps Script API และวางไฟล์ appsscript.json จากศูนย์อัปเดต (ครั้งเดียว)']},
   {v:'1.3.15', d:'12 พ.ย. 2569', n:['เอกสารรหัส (บัญชีครู, รหัสแอดมินโรงเรียน, ตั้งรหัสผ่านรายคน) ที่สร้างซ้ำ จะมี “สร้างครั้งที่ …” ต่อท้ายชื่อไฟล์ ที่หัวเอกสาร และกรอบแจ้งท้ายกระดาษว่ารหัสฉบับก่อนใช้ไม่ได้แล้ว']},
   {v:'1.3.14', d:'12 พ.ย. 2569', n:['ถ้าระบบถูก deploy โดยบัญชีที่ไม่ใช่เจ้าของ Google Sheet ระบบจะไม่บันทึกไฟล์ลง Drive เลย (กันไฟล์เป็นของคนอื่นและกินพื้นที่บัญชีอื่น) และแจ้งให้เจ้าของ deploy ใหม่','หน้าพื้นที่จัดเก็บแสดงอีเมลบัญชีที่ระบบกำลังทำงานอยู่']},
@@ -1758,7 +1759,7 @@ async function tfSave(){ const L=TFB.map(b=>({id:b.id,label:String(b.label||'').
 function rbDoc(id,chk){ const O=roptsOf(RB[RBT],RBT); let off=O.docsOff.filter(x=>x!==id); if(!chk) off.push(id); const n={...O,docsOff:off}; delete n.docs; RB[RBT].opts=n; render(); }
 function rbOpt(k,v){ RB[RBT].opts={...roptsOf(RB[RBT],RBT),[k]:v}; render(); }
 VIEWS.settings = ()=>{
-  const s=Store.settings, si=s.school_info||{}, T=[['rubric','ข้อคำถาม A/B/C'],['tfiles','📤 ช่องอัปโหลดฝั่งครู'],['clear','🧹 ล้างข้อมูล'],['demo','🧪 ข้อมูลจำลอง'],['year','ภาคเรียน/ปีการศึกษา'],['school','สถานศึกษา & คาบเรียน'],['storage','💾 พื้นที่จัดเก็บ'],['export','📤 ส่งออกข้อมูลประเมิน'],['docs','📄 ตัวอย่างเอกสาร'],['theme','ธีมสี'],['update','🔄 อัปเดตระบบ']];
+  const s=Store.settings, si=s.school_info||{}, T=[['rubric','ข้อคำถาม A/B/C'],['tfiles','📤 ช่องอัปโหลดฝั่งครู'],['clear','🧹 ล้างข้อมูล'],['demo','🧪 ข้อมูลจำลอง'],['year','ภาคเรียน/ปีการศึกษา'],['school','สถานศึกษา & คาบเรียน'],['storage','💾 พื้นที่จัดเก็บ'],['export','📤 ส่งออกข้อมูลประเมิน'],['docs','📄 ตัวอย่างเอกสาร'],['regen','♻️ สร้างเอกสารใหม่'],['theme','ธีมสี'],['update','🔄 อัปเดตระบบ']];
   let body='';
   if(STAB==='rubric'){ if(!RB) RB=JSON.parse(JSON.stringify(s.rubrics||DEFAULT_RUBRICS)); const R=RB[RBT], n=R.cats.reduce((a,c)=>a+c.items.length,0);
     body=`<div class="row" style="margin-bottom:12px">${['A','B','C'].map(t=>`<button class="tab ${RBT===t?'on':''}" onclick="RBT='${t}';render()">แบบ ${t}</button>`).join('')}<span class="sp"></span>
@@ -1829,9 +1830,45 @@ VIEWS.settings = ()=>{
        <div class="muted" style="margin-bottom:12px">ขณะนี้มีข้อมูลจำลอง <b>${n}</b> รายการ</div>
        <button class="btn" style="color:var(--bad)" ${n?'':'disabled'} onclick="clearDemo()">🗑 ล้างข้อมูลจำลอง</button></div></div>`; }
   if(STAB==='update') body=`<div id="updBox"><div class="muted">กำลังตรวจสอบเวอร์ชัน…</div></div>`;
+  if(STAB==='regen') body=regenTab();
   return `<div class="tabs">${T.map(t=>`<div class="tab ${STAB===t[0]?'on':''}" onclick="STAB='${t[0]}';render()">${t[1]}</div>`).join('')}</div><div class="card glass">${body}</div>`;
 };
 AFTER.settings=()=>{ if(STAB==='school') bindDrops({section:'สถานศึกษา',prefix:'logo_'}); if(STAB==='storage') renderUsage(false); if(STAB==='update') updRender(); };
+/* ===== สร้างเอกสาร PDF ใหม่จากข้อมูลเดิม (แก้เอกสารที่สร้างจากโค้ดรุ่นเก่า) ===== */
+let RG={year:'',term:'',school:'',type:'',only:'pdf',sel:null};
+function regenList(){ return Object.values(Store.data.Evaluations).filter(e=>evalDone(e)&&(!RG.year||e.year===RG.year)&&(!RG.term||String(e.term)===String(RG.term))
+  &&(!RG.school||schOf(e)===RG.school)&&(!RG.type||e.type===RG.type)&&(RG.only!=='pdf'||e.pdf_drive_link))
+  .sort((a,b)=>schOf(a).localeCompare(schOf(b))||uname(a.teacher_id).localeCompare(uname(b.teacher_id))||String(a.type).localeCompare(String(b.type))); }
+function regenTab(){ const all=Object.values(Store.data.Evaluations).filter(evalDone), L=regenList();
+  if(!RG.sel) RG.sel={}; L.forEach(e=>{ if(RG.sel[e.eval_id]==null) RG.sel[e.eval_id]=true; });
+  const n=L.filter(e=>RG.sel[e.eval_id]).length, yrs=[...new Set(all.map(e=>e.year).filter(Boolean))].sort(), sch=[...new Set(all.map(schOf))].sort();
+  const f=(k,v)=>`RG.${k}=${v};RG.sel=null;render()`;
+  return `<div class="muted" style="margin-bottom:12px">ใช้ข้อมูลผลประเมินเดิมที่บันทึกไว้ สร้างรายงาน PDF ใหม่ด้วยรูปแบบเอกสารล่าสุด แล้ว<b>แทนที่ไฟล์เดิมใน Drive</b> (ไฟล์เก่าย้ายไปถังขยะ ลิงก์ในระบบเปลี่ยนเป็นไฟล์ใหม่ให้อัตโนมัติ) · ข้อมูลคะแนนไม่ถูกแก้ไข<br>ตัวอย่าง: รายงานที่เคยตัดหน้ากลางแถว หรือข้อความซ้อนกันในเวอร์ชันก่อน 1.3.11</div>
+   <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">
+     <select style="width:auto" onchange="${f('year','this.value')}"><option value="">ทุกปีการศึกษา</option>${opt(yrs,RG.year)}</select>
+     <select style="width:auto" onchange="${f('term','this.value')}">${opt([['','ทุกภาคเรียน'],['1','ภาคเรียนที่ 1'],['2','ภาคเรียนที่ 2']],RG.term)}</select>
+     <select style="width:auto" onchange="${f('school','this.value')}"><option value="">ทุกโรงเรียน</option>${opt(sch,RG.school)}</select>
+     <select style="width:auto" onchange="${f('type','this.value')}">${opt([['','ทุกแบบ'],['A','แบบ A'],['B','แบบ B'],['C','แบบ C']],RG.type)}</select>
+     <select style="width:auto" onchange="${f('only','this.value')}">${opt([['pdf','เฉพาะที่เคยบันทึก PDF แล้ว'],['all','ทุกรายการที่ประเมินเสร็จ']],RG.only)}</select></div>
+   <div class="tw" style="max-height:52vh;overflow:auto"><table><thead><tr><th><input type="checkbox" style="width:auto" ${L.length&&n===L.length?'checked':''} onchange="regenAll(this.checked)"></th><th>โรงเรียน</th><th>ครู</th><th>แบบ</th><th>ภาค/ปี</th><th>วันที่นิเทศ</th><th>PDF เดิม</th></tr></thead><tbody>
+   ${L.length?L.map(e=>`<tr><td><input type="checkbox" style="width:auto" ${RG.sel[e.eval_id]?'checked':''} onchange="RG.sel['${e.eval_id}']=this.checked;render()"></td><td>${esc(schOf(e))}</td><td>${esc(uname(e.teacher_id))}</td><td><span class="badge">${esc(e.type)}</span></td><td>${esc(e.term)}/${esc(e.year)}</td><td>${thDate(e.date)}</td>
+     <td>${e.pdf_drive_link?`<a href="${esc(e.pdf_drive_link)}" target="_blank">เปิด</a>`:'<span class="muted">ยังไม่มี</span>'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">ไม่พบรายการตามตัวกรอง</td></tr>'}</tbody></table></div>
+   <div class="row" style="margin-top:14px"><span class="muted" style="font-size:13px">ใช้เวลาประมาณ 5–10 วินาทีต่อรายการ · ระหว่างนี้อย่าปิดหน้าเว็บ</span><span class="sp"></span>
+     <button class="btn pri" ${n?'':'disabled'} onclick="regenRun()">♻️ สร้างเอกสารใหม่ ${n} รายการ</button></div>`; }
+function regenAll(on){ regenList().forEach(e=>RG.sel[e.eval_id]=on); render(); }
+async function regenRun(){ if(MODE!=='gas') return SW.err('ใช้ได้เมื่อเปิดผ่าน Web app');
+  const L=regenList().filter(e=>RG.sel[e.eval_id]); if(!L.length) return;
+  if(!(await SW.confirm('สร้างเอกสารใหม่ '+L.length+' รายการ?','ไฟล์ PDF เดิมจะถูกย้ายไปถังขยะ และแทนที่ด้วยไฟล์ใหม่'))) return;
+  const bad=[]; let ok=0; loader(true);
+  try{ for(let i=0;i<L.length;i++){ const e=L[i]; loaderText('กำลังสร้างเอกสาร '+(i+1)+' / '+L.length+' · '+uname(e.teacher_id)+' แบบ '+e.type);
+      try{ const pdf=await htmlToPdfB64(reportHtml(e));
+        const r=await gasCall('apiMakePdf',Store.token,JSON.stringify({pdf,filename:pdfName(e),year:e.year||'',sub:evalPath(e)+'/แบบ '+e.type+' '+clean(rubE(e).name).slice(0,40),eval_id:e.eval_id}));
+        Store.data.Evaluations[e.eval_id].pdf_drive_link=r.url; FS.mirror([{c:'Evaluations',op:'merge',id:e.eval_id,data:{pdf_drive_link:r.url}}]); ok++;
+      }catch(err){ bad.push(uname(e.teacher_id)+' แบบ '+e.type+': '+(err.message||err)); } } }
+  finally{ loader(false); loaderText(''); }
+  render();
+  if(bad.length) SW.err('สร้างเสร็จ '+ok+' รายการ · ไม่สำเร็จ '+bad.length+' รายการ',bad.slice(0,5).join('\n')+(bad.length>5?'\n…':''));
+  else SW.ok('สร้างเอกสารใหม่เรียบร้อย '+ok+' รายการ'); }
 /* ===== อัปเดตระบบในคลิกเดียว (ทำงานในนามเจ้าของระบบ ผ่าน Apps Script API) ===== */
 async function updRender(){ const box=$('#updBox'); if(!box) return;
   if(MODE!=='gas'){ box.innerHTML='<div class="muted">ใช้ได้เมื่อเปิดผ่าน Web app</div>'; return; }
