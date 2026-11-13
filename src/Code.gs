@@ -777,7 +777,7 @@ function apiMakePdf(token, json){
   const f = dir.createFile(blob);
   try{ f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); }catch(e){}
   const url = 'https://drive.google.com/file/d/'+f.getId()+'/view';
-  if (p.eval_id){ writeColl_('Evaluations',[{op:'merge', id:p.eval_id, data:{pdf_drive_link:url}}]); }
+  if (p.eval_id){ writeColl_('Evaluations',[{op:'merge', id:p.eval_id, data:(p.regen?{pdf_drive_link:url, pdf_regen_ver:String(p.regen)}:{pdf_drive_link:url})}]); }
   return JSON.stringify({ok:true, url});
 }
 

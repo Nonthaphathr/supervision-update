@@ -425,8 +425,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.24';
+const APP_VERSION = '1.3.25';
 const APP_CHANGELOG = [
+  {v:'1.3.25', d:'13 พ.ย. 2569', n:['ตั้งค่า › ♻️ สร้างเอกสารใหม่: จดจำรายการที่สร้างใหม่แล้ว ถ้าค้างกลางทางกดซ้ำเพื่อทำต่อได้ (ซ่อนรายการที่เสร็จแล้วโดยอัตโนมัติ เลือกแสดงทั้งหมดได้)']},
   {v:'1.3.24', d:'12 พ.ย. 2569', n:['ลิงก์ “ศูนย์อัปเดต” ในหน้าอัปเดตระบบ ส่งรหัสโปรเจกต์ไปด้วย ศูนย์อัปเดตจึงมีปุ่มเปิดหน้าแก้โค้ดของระบบนั้นให้ทันที']},
   {v:'1.3.23', d:'12 พ.ย. 2569', n:['ออกแบบหน้าอัปเดตระบบใหม่: ขั้น 1–2 อยู่ในกล่องเดียวพร้อมปุ่ม “เปิดหน้าแก้โค้ด” เด่น ๆ และขั้น 3 เป็นภาพจำลองเคลื่อนไหวพร้อมปุ่มเลือกทีละขั้น']},
   {v:'1.3.22', d:'12 พ.ย. 2569', n:['แก้ปุ่ม “เปิดหน้าแก้โค้ด” ในหน้าอัปเดตระบบที่เปิดเป็นหน้าว่าง']},
@@ -1914,13 +1915,13 @@ VIEWS.settings = ()=>{
 };
 AFTER.settings=()=>{ if(STAB==='school') bindDrops({section:'สถานศึกษา',prefix:'logo_'}); if(STAB==='storage') renderUsage(false); if(STAB==='update') updRender(); };
 /* ===== สร้างเอกสาร PDF ใหม่จากข้อมูลเดิม (แก้เอกสารที่สร้างจากโค้ดรุ่นเก่า) ===== */
-let RG={year:'',term:'',school:'',type:'',only:'pdf',sel:null};
+let RG={year:'',term:'',school:'',type:'',only:'pdf',skip:true,sel:null};
 function regenList(){ return Object.values(Store.data.Evaluations).filter(e=>evalDone(e)&&(!RG.year||e.year===RG.year)&&(!RG.term||String(e.term)===String(RG.term))
-  &&(!RG.school||schOf(e)===RG.school)&&(!RG.type||e.type===RG.type)&&(RG.only!=='pdf'||e.pdf_drive_link))
+  &&(!RG.school||schOf(e)===RG.school)&&(!RG.type||e.type===RG.type)&&(RG.only!=='pdf'||e.pdf_drive_link)&&(!RG.skip||e.pdf_regen_ver!==APP_VERSION))
   .sort((a,b)=>schOf(a).localeCompare(schOf(b))||uname(a.teacher_id).localeCompare(uname(b.teacher_id))||String(a.type).localeCompare(String(b.type))); }
 function regenTab(){ const all=Object.values(Store.data.Evaluations).filter(evalDone), L=regenList();
   if(!RG.sel) RG.sel={}; L.forEach(e=>{ if(RG.sel[e.eval_id]==null) RG.sel[e.eval_id]=true; });
-  const n=L.filter(e=>RG.sel[e.eval_id]).length, yrs=[...new Set(all.map(e=>e.year).filter(Boolean))].sort(), sch=[...new Set(all.map(schOf))].sort();
+  const doneN=all.filter(e=>e.pdf_regen_ver===APP_VERSION).length, n=L.filter(e=>RG.sel[e.eval_id]).length, yrs=[...new Set(all.map(e=>e.year).filter(Boolean))].sort(), sch=[...new Set(all.map(schOf))].sort();
   const f=(k,v)=>`RG.${k}=${v};RG.sel=null;render()`;
   return `<div class="muted" style="margin-bottom:12px">ใช้ข้อมูลผลประเมินเดิมที่บันทึกไว้ สร้างรายงาน PDF ใหม่ด้วยรูปแบบเอกสารล่าสุด แล้ว<b>แทนที่ไฟล์เดิมใน Drive</b> (ไฟล์เก่าย้ายไปถังขยะ ลิงก์ในระบบเปลี่ยนเป็นไฟล์ใหม่ให้อัตโนมัติ) · ข้อมูลคะแนนไม่ถูกแก้ไข<br>ตัวอย่าง: รายงานที่เคยตัดหน้ากลางแถว หรือข้อความซ้อนกันในเวอร์ชันก่อน 1.3.11</div>
    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">
@@ -1928,11 +1929,12 @@ function regenTab(){ const all=Object.values(Store.data.Evaluations).filter(eval
      <select style="width:auto" onchange="${f('term','this.value')}">${opt([['','ทุกภาคเรียน'],['1','ภาคเรียนที่ 1'],['2','ภาคเรียนที่ 2']],RG.term)}</select>
      <select style="width:auto" onchange="${f('school','this.value')}"><option value="">ทุกโรงเรียน</option>${opt(sch,RG.school)}</select>
      <select style="width:auto" onchange="${f('type','this.value')}">${opt([['','ทุกแบบ'],['A','แบบ A'],['B','แบบ B'],['C','แบบ C']],RG.type)}</select>
-     <select style="width:auto" onchange="${f('only','this.value')}">${opt([['pdf','เฉพาะที่เคยบันทึก PDF แล้ว'],['all','ทุกรายการที่ประเมินเสร็จ']],RG.only)}</select></div>
+     <select style="width:auto" onchange="${f('only','this.value')}">${opt([['pdf','เฉพาะที่เคยบันทึก PDF แล้ว'],['all','ทุกรายการที่ประเมินเสร็จ']],RG.only)}</select>
+     <select style="width:auto" onchange="${f('skip','this.value==\'1\'')}">${opt([['1','ข้ามรายการที่สร้างใหม่แล้ว ('+doneN+')'],['0','แสดงทั้งหมด (รวมที่สร้างใหม่แล้ว)']],RG.skip?'1':'0')}</select></div>
    <div class="tw" style="max-height:52vh;overflow:auto"><table><thead><tr><th><input type="checkbox" style="width:auto" ${L.length&&n===L.length?'checked':''} onchange="regenAll(this.checked)"></th><th>โรงเรียน</th><th>ครู</th><th>แบบ</th><th>ภาค/ปี</th><th>วันที่นิเทศ</th><th>PDF เดิม</th></tr></thead><tbody>
    ${L.length?L.map(e=>`<tr><td><input type="checkbox" style="width:auto" ${RG.sel[e.eval_id]?'checked':''} onchange="RG.sel['${e.eval_id}']=this.checked;render()"></td><td>${esc(schOf(e))}</td><td>${esc(uname(e.teacher_id))}</td><td><span class="badge">${esc(e.type)}</span></td><td>${esc(e.term)}/${esc(e.year)}</td><td>${thDate(e.date)}</td>
      <td>${e.pdf_drive_link?`<a href="${esc(e.pdf_drive_link)}" target="_blank">เปิด</a>`:'<span class="muted">ยังไม่มี</span>'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">ไม่พบรายการตามตัวกรอง</td></tr>'}</tbody></table></div>
-   <div class="row" style="margin-top:14px"><span class="muted" style="font-size:13px">ใช้เวลาประมาณ 5–10 วินาทีต่อรายการ · ระหว่างนี้อย่าปิดหน้าเว็บ</span><span class="sp"></span>
+   <div class="row" style="margin-top:14px"><span class="muted" style="font-size:13px">ใช้เวลาประมาณ 5–10 วินาทีต่อรายการ · ระหว่างนี้อย่าปิดหน้าเว็บ · ถ้าค้างหรือปิดหน้าเว็บ กดสร้างใหม่อีกครั้งได้ ระบบจะทำต่อเฉพาะรายการที่ยังไม่เสร็จ</span><span class="sp"></span>
      <button class="btn pri" ${n?'':'disabled'} onclick="regenRun()">♻️ สร้างเอกสารใหม่ ${n} รายการ</button></div>`; }
 function regenAll(on){ regenList().forEach(e=>RG.sel[e.eval_id]=on); render(); }
 async function regenRun(){ if(MODE!=='gas') return SW.err('ใช้ได้เมื่อเปิดผ่าน Web app');
@@ -1941,8 +1943,8 @@ async function regenRun(){ if(MODE!=='gas') return SW.err('ใช้ได้เ
   const bad=[]; let ok=0; loader(true);
   try{ for(let i=0;i<L.length;i++){ const e=L[i]; loaderText('กำลังสร้างเอกสาร '+(i+1)+' / '+L.length+' · '+uname(e.teacher_id)+' แบบ '+e.type);
       try{ const pdf=await htmlToPdfB64(reportHtml(e));
-        const r=await gasCall('apiMakePdf',Store.token,JSON.stringify({pdf,filename:pdfName(e),year:e.year||'',sub:evalPath(e)+'/แบบ '+e.type+' '+clean(rubE(e).name).slice(0,40),eval_id:e.eval_id}));
-        Store.data.Evaluations[e.eval_id].pdf_drive_link=r.url; FS.mirror([{c:'Evaluations',op:'merge',id:e.eval_id,data:{pdf_drive_link:r.url}}]); ok++;
+        const r=await gasCall('apiMakePdf',Store.token,JSON.stringify({pdf,filename:pdfName(e),year:e.year||'',sub:evalPath(e)+'/แบบ '+e.type+' '+clean(rubE(e).name).slice(0,40),eval_id:e.eval_id,regen:APP_VERSION}));
+        Store.data.Evaluations[e.eval_id].pdf_drive_link=r.url; Store.data.Evaluations[e.eval_id].pdf_regen_ver=APP_VERSION; FS.mirror([{c:'Evaluations',op:'merge',id:e.eval_id,data:{pdf_drive_link:r.url,pdf_regen_ver:APP_VERSION}}]); ok++;
       }catch(err){ bad.push(uname(e.teacher_id)+' แบบ '+e.type+': '+(err.message||err)); } } }
   finally{ loader(false); loaderText(''); }
   render();
