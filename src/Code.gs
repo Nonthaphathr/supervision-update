@@ -303,7 +303,7 @@ function authorize_(u, o){
   if (o.c==='Schools' && r==='SchoolAdmin' && o.op==='merge' && o.data && Object.keys(o.data).join()==='periods'){
     const cur = readColl_('Schools')[o.id]; if (cur && cur.name===u.school) return;
     throw new Error('ตั้งค่าคาบเรียนได้เฉพาะโรงเรียนของท่าน'); }
-  if (o.c==='Settings' && r==='Supervisor' && o.op==='merge' && o.data && ['cert','cert_pub','survey','rubrics'].indexOf(Object.keys(o.data).join())>=0) return;   /* ศน. ตั้งค่าเกียรติบัตร/แบบประเมินความพึงพอใจ/ข้อกระทงการนิเทศได้ */
+  if (o.c==='Settings' && r==='Supervisor' && o.op==='merge' && o.data && ['cert','cert_pub','sch_rep','survey','rubrics'].indexOf(Object.keys(o.data).join())>=0) return;   /* ศน. ตั้งค่าเกียรติบัตร/แบบประเมินความพึงพอใจ/ข้อกระทงการนิเทศได้ */
   if (o.c==='Settings' || o.c==='Schools'){ need_(u,['Admin']); return; }
   if (o.c==='Evaluations'){ need_(u,['Admin','Supervisor']);
     if (r==='Supervisor'){ const cur = readColl_('Evaluations')[o.id];

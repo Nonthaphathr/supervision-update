@@ -427,8 +427,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.29';
+const APP_VERSION = '1.3.30';
 const APP_CHANGELOG = [
+  {v:'1.3.30', d:'14 พ.ย. 2569', n:['ศน.: เมนู “คัดลอกข้อความแจ้งผู้บริหาร” ขึ้นเมื่อมีโรงเรียนนิเทศครบถ้วน พร้อมลิงก์รายงานสรุปผลฉบับสมบูรณ์ของโรงเรียน','เพิ่มคู่มือผู้บริหาร และปรับปรุงคู่มือ ศน.']},
   {v:'1.3.29', d:'14 พ.ย. 2569', n:['หน้า “ส่งผลงาน…” ของครู: ไม่ถามรายวิชาและชั้นเป็นค่าเริ่มต้น ศน. ติ๊กให้ถามได้ในตั้งค่าข้อกระทง']},
   {v:'1.3.28', d:'14 พ.ย. 2569', n:['ข้อกระทงการนิเทศ: เลือกคนอัปโหลดแยกกันระหว่างรูปภาพกับไฟล์ PDF (เช่น ครูอัปไฟล์ ศน. อัปภาพ)']},
   {v:'1.3.27', d:'14 พ.ย. 2569', n:['ครู: เมื่อได้รับการนิเทศครบ A·B·C จะมีหน้าต่างแจ้ง “ประเมินเสร็จสิ้น” พร้อมทางลัด ประเมินความพึงพอใจ / เอกสารสรุปผล / เกียรติบัตร','ครูที่ผลเข้าเกณฑ์มีเมนู “พิมพ์เกียรติบัตร” ดาวน์โหลด PDF ได้เอง หลัง ศน. ออกเกียรติบัตรแล้ว','ผู้บริหาร: ดาวน์โหลดรายงานสรุปผลการนิเทศโรงเรียนฉบับเต็ม (ปก คำนำ ผลรายบุคคล ข้อเสนอแนะ) เป็น PDF']},
@@ -583,6 +584,7 @@ const NAV = [
   {id:'aggregate', t:'สรุปผลกรรมการ', d:'รวมคะแนนจากผู้นิเทศทุกคน แยกรายครู', ic:'agg', roles:['Supervisor'], p:['supervisor']},
   {id:'signature', t:'ลายเซ็นดิจิทัล', d:'วาดหรืออัปโหลดลายเซ็นสำหรับรายงาน PDF', ic:'sig', roles:['Supervisor'], p:['supervisor']},
   {id:'certificate', t:'ออกเกียรติบัตร', d:'ออกเกียรติบัตรตามระดับผลการประเมิน ดาวน์โหลด PDF รายคนหรือทั้งโรงเรียน', ic:'cert', roles:['Admin','Supervisor'], p:['supervisor','admin']},
+  {id:'notifyexec', t:'คัดลอกข้อความแจ้งผู้บริหาร', d:'โรงเรียนที่นิเทศเสร็จสิ้นครบถ้วน · คัดลอกข้อความแจ้ง ผอ. พร้อมลิงก์รายงานฉบับสมบูรณ์', ic:'bell', roles:['Admin','Supervisor'], p:['supervisor','admin'], cond:()=>nxDone().length>0},
   {id:'followup', t:'แจ้งติดตาม', d:'สร้างข้อความแจ้งติดตามถึงผู้อำนวยการโรงเรียน พร้อมรายชื่อ คัดลอกไปส่งได้ทันที', ic:'bell', roles:['Admin','Supervisor'], p:['supervisor','admin']},
   {g:'ความพึงพอใจต่อการนิเทศ'},
   {id:'surveydash', t:'ผลความพึงพอใจ', d:'แดชบอร์ดผลประเมินความพึงพอใจของครูและผู้บริหาร (ไม่ระบุตัวตน)', ic:'heart', roles:['Admin','Supervisor'], p:['supervisor','admin']},
@@ -2452,8 +2454,8 @@ function doneModal(force){ const D=tDoneInfo(); if(!D) return false; const k='dm
   return true; }
 
 /* ---- ผู้บริหาร: รายงานสรุปผลการนิเทศโรงเรียน ฉบับเต็ม (ปก · คำนำ · สารบัญ · เนื้อหา) ดาวน์โหลดเป็น PDF ---- */
-function schoolReportHtml(){ const si=Store.settings.school_info||{}, D=sdRows(SDF.year,SDF.term), R=D.rows, n=R.length, f=x=>x==null?'-':(+x).toFixed(2), pc=(a,b)=>b?(a/b*100).toFixed(2):'0.00';
-  const per=SDF.term?'ภาคเรียนที่ '+SDF.term+' ปีการศึกษา '+SDF.year:'ปีการศึกษา '+SDF.year, sc=D.sc||'โรงเรียน', today=thDate(new Date());
+function schoolReportHtml(sc0,yr,tm){ if(yr==null){ yr=SDF.year; tm=SDF.term; } const si=Store.settings.school_info||{}, D=sdRows(yr,tm,sc0), R=D.rows, n=R.length, f=x=>x==null?'-':(+x).toFixed(2), pc=(a,b)=>b?(a/b*100).toFixed(2):'0.00';
+  const per=tm?'ภาคเรียนที่ '+tm+' ปีการศึกษา '+yr:'ปีการศึกษา '+yr, sc=D.sc||'โรงเรียน', today=thDate(new Date());
   const seen=R.filter(r=>r.k>0).length, full=R.filter(r=>r.k===3).length, sAll=D.EV.map(e=>+e.total_normalized||0), sAvg=sAll.length?avg(sAll):null, W=R.filter(r=>r.w!=null);
   const PB='<div style="page-break-before:always;break-before:page"></div>', H=(t)=>`<h2 style="font-size:19px;margin:0 0 10px;color:#9A3412;border-bottom:2px solid #FDBA74;padding-bottom:4px">${t}</h2>`;
   const gs=((Store.settings||{}).grade_scale||[]).slice().sort((a,b)=>b.min-a.min);
@@ -2503,6 +2505,51 @@ function schoolReportHtml(){ const si=Store.settings.school_info||{}, D=sdRows(S
 async function schoolReportPdf(){ if(!sdRows(SDF.year,SDF.term).rows.length) return SW.err('ไม่พบรายชื่อครูในโรงเรียน');
   const b64=await busy(()=>htmlToPdfB64(schoolReportHtml()));
   saveBlob(new Blob([b64ToBytes(b64)],{type:'application/pdf'}),clean('รายงานสรุปผลการนิเทศ_'+(Store.user.school||'')+'_'+(SDF.term?'ภาคเรียนที่ '+SDF.term+'-':'ปีการศึกษา ')+SDF.year)+'.pdf'); toast('ดาวน์โหลดรายงานแล้ว'); }
+
+/* ---- ศน./แอดมิน: โรงเรียนที่นิเทศครบถ้วน (ครูทุกคนได้รับการนิเทศครบ A·B·C ภาคเรียนปัจจุบัน) → คัดลอกข้อความแจ้งผู้บริหาร + ลิงก์รายงานฉบับสมบูรณ์ ----
+   ลิงก์รายงานเก็บไว้ที่ settings.sch_rep[ "โรงเรียน|ปี/ภาค" ] = {url,at} เพื่อไม่ต้องสร้างซ้ำ */
+const NX_RD=()=>String(Store.settings.academic_year)+'/'+String(Store.settings.term);
+function nxSchools(){ const y=String(Store.settings.academic_year), t=String(Store.settings.term);
+  return mySchools().map(sc=>{ const T=teachers(sc).filter(u=>u.status!=='suspended'), E=Object.values(Store.data.Evaluations||{}).filter(e=>String(e.year)===y&&String(e.term)===t&&evalDone(e));
+    const ok=T.filter(u=>['A','B','C'].every(x=>E.some(e=>e.teacher_id===u.username&&e.type===x)));
+    return {school:sc,n:T.length,done:ok.length,full:T.length>0&&ok.length===T.length}; }); }
+const nxDone=()=>nxSchools().filter(x=>x.full);
+const nxRep=sc=>(((Store.settings||{}).sch_rep)||{})[sc+'|'+NX_RD()];
+VIEWS.notifyexec=()=>{ const L=nxSchools(), rd=NX_RD();
+  return `<div class="card glass reveal"><div class="muted" style="font-size:13.5px;line-height:1.7">โรงเรียนที่ครูทุกคนได้รับการนิเทศครบ ${['A','B','C'].map(t=>esc(rlabel(t))).join(' · ')} ในภาคเรียนที่ ${esc(rd)} จะกดคัดลอกข้อความแจ้งผู้อำนวยการโรงเรียนได้ พร้อมลิงก์รายงานสรุปผลการนิเทศฉบับสมบูรณ์ (ไฟล์ PDF ใน Drive ที่ผู้มีลิงก์เปิดดูได้)</div></div>
+   <div class="card glass reveal"><div class="tw"><table><thead><tr><th>โรงเรียน</th><th>ครูที่นิเทศครบ</th><th>สถานะ</th><th></th></tr></thead><tbody>
+   ${L.map(x=>`<tr><td><b>${esc(x.school)}</b></td><td>${x.done} / ${x.n} คน</td><td>${x.full?'<span class="badge g">✅ เสร็จสิ้นครบถ้วน</span>':'<span class="badge y">กำลังดำเนินการ</span>'}${nxRep(x.school)?' <span class="badge">มีรายงานแล้ว</span>':''}</td>
+     <td class="row">${x.full?`<button class="btn sm pri" onclick="nxOpen('${esc(x.school)}')">📋 คัดลอกข้อความแจ้งผู้บริหาร</button>`:''}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">ไม่มีโรงเรียนในความรับผิดชอบ</td></tr>'}</tbody></table></div></div>`; };
+AFTER.notifyexec=()=>initReveal();
+async function nxMakeRep(sc){ if(MODE!=='gas') return {url:'(ลิงก์รายงานจะสร้างเมื่อเปิดผ่าน Web app)'};
+  const y=String(Store.settings.academic_year), t=String(Store.settings.term);
+  const pdf=await busy(()=>htmlToPdfB64(schoolReportHtml(sc,y,t)));
+  const r=await busy(()=>gasCall('apiMakePdf',Store.token,JSON.stringify({pdf,filename:clean('รายงานสรุปผลการนิเทศ_'+sc+'_ภาคเรียนที่ '+t+'-'+y),year:y,sub:'รายงานสรุปผลโรงเรียน/ภาคเรียนที่ '+t})));
+  const rec={url:r.url,at:new Date().toISOString()}, all={...(((Store.settings||{}).sch_rep)||{}),[sc+'|'+NX_RD()]:rec};
+  try{ await commit([{c:'Settings',op:'merge',id:'main',data:{sch_rep:all}}]); }catch(e){}
+  return rec; }
+function nxMsg(sc,url){ const si=Store.settings.school_info||{}, rec=schoolRec(sc)||{}, D=sdRows(String(Store.settings.academic_year),String(Store.settings.term),sc), R=D.rows,
+    s=D.EV.map(e=>+e.total_normalized||0), av=s.length?avg(s):null, me=Store.data.Users[Store.user.username]||Store.user;
+  return `เรียน ผู้อำนวยการ${sc}${rec.director?' ('+rec.director+')':''}
+
+ตามที่${si.name||'กลุ่มงานนิเทศการศึกษา'} ได้ดำเนินการนิเทศ ติดตาม และประเมินการจัดการเรียนรู้ของครูใน${sc} ภาคเรียนที่ ${Store.settings.term}/${Store.settings.academic_year} บัดนี้การนิเทศได้ดำเนินการเสร็จสิ้นครบถ้วนแล้ว
+• ครูได้รับการนิเทศครบทั้ง 3 แบบ ${R.filter(r=>r.k===3).length} จาก ${R.length} คน
+• คะแนนเฉลี่ยของโรงเรียน ${av!=null?av.toFixed(2)+' ระดับ'+gradeOf(av):'-'}
+
+จึงขอส่งรายงานสรุปผลการนิเทศฉบับสมบูรณ์ เพื่อโปรดทราบและใช้เป็นข้อมูลในการพัฒนาครูต่อไป
+📄 รายงานฉบับสมบูรณ์: ${url}
+
+ขอแสดงความนับถือ
+${me.signature_name||me.name||''}
+${me.signature_pos||'ศึกษานิเทศก์'}`; }
+async function nxOpen(sc,regen){ let r=!regen&&nxRep(sc); if(!r) r=await nxMakeRep(sc); if(!r||!r.url) return;
+  openModal(`<div class="row" style="margin-bottom:8px"><h3 style="margin:0">📋 ข้อความแจ้งผู้บริหาร</h3><span class="sp"></span><button class="btn sm ghost" onclick="closeModal()">ปิด ✕</button></div>
+    <div class="muted" style="font-size:13px;margin-bottom:8px">${esc(sc)} · แก้ข้อความได้ก่อนคัดลอก แล้วนำไปวางใน LINE หรืออีเมล</div>
+    <textarea id="nx_msg" style="width:100%;min-height:300px;font-size:14px;line-height:1.6">${esc(nxMsg(sc,r.url))}</textarea>
+    <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">${/^https?:/.test(r.url)?`<a class="btn sm" target="_blank" href="${esc(r.url)}">📄 เปิดดูรายงาน</a>`:''}<button class="btn sm" onclick="closeModal();nxOpen('${esc(sc)}',true)" title="สร้าง PDF ใหม่จากข้อมูลล่าสุด">♻️ สร้างรายงานใหม่</button><span class="sp"></span>
+     <button class="btn pri" onclick="nxCopy()">📋 คัดลอกข้อความ</button></div>`,'640px');
+  if(cur==='notifyexec') setTimeout(()=>{ const v=$('#view'); if(v) v.innerHTML=VIEWS.notifyexec(); initReveal(); },0); }
+async function nxCopy(){ const t=$('#nx_msg'); if(!t) return; try{ await navigator.clipboard.writeText(t.value); }catch(e){ t.select(); document.execCommand('copy'); } toast('คัดลอกข้อความแล้ว'); }
 
 /* ---- ตั้งค่า ---- */
 function certInit(){ const c=certCfg(); FORM.certbg=c.bg; FORM.certseal=c.seal; FORM.certsig1=c.s1.sig; FORM.certsig2=c.s2.sig; }
@@ -2778,7 +2825,7 @@ async function svEdSave(){ const D=SVD, Q=D.items.filter(x=>x.type!=='section');
 /* ================= ภาพรวมโรงเรียน (ผอ./รองผอ. · อ่านอย่างเดียว) =================
    ข้อมูลทั้งโรงเรียนของตนมาจากเซิร์ฟเวอร์ (loadFor_ ส่งให้เฉพาะบทบาท User) · ไม่มีเมนูอัปโหลดแผน/จองคาบ */
 let SDF={year:'',term:'',init:false}, SDCH=null;
-function sdRows(yr,tm){ const sc=Store.user.school||'', T=teachers(sc), EV=Object.values(Store.data.Evaluations).filter(e=>(!yr||e.year===yr)&&(!tm||String(e.term)===String(tm))),
+function sdRows(yr,tm,sc0){ const sc=sc0!=null?sc0:(Store.user.school||''), T=teachers(sc), EV=Object.values(Store.data.Evaluations).filter(e=>(!yr||e.year===yr)&&(!tm||String(e.term)===String(tm))),
     PL=Object.values(Store.data.LessonPlans).filter(p=>(!yr||p.year===yr)&&(!tm||String(p.term)===String(tm)));
   return {sc,EV,PL,rows:T.map(t=>{ const L=EV.filter(e=>e.teacher_id===t.username), by=x=>L.filter(e=>e.type===x),
       av=x=>{ const a=by(x).map(e=>+e.total_normalized||0); return a.length?avg(a):null; }, ws=['A','B','C'].filter(x=>av(x)!=null), s=ws.reduce((a,x)=>a+AGW[x],0),
@@ -3169,6 +3216,7 @@ const HELP={
            {t:'ส่วนที่ 1 ครูผู้สอน',d:'สำหรับครูผู้รับการนิเทศ',id:'1x8Tnj0h42cl07W9GCAFzJqg2Coeyp55V'},
            {t:'ส่วนที่ 2 ศึกษานิเทศก์',d:'สำหรับผู้นิเทศและประเมิน',id:'1ldbJXiS12k9i5iHc0Uv4jOH7_YQPJuOH'},
            {t:'ส่วนที่ 3 แอดมินระบบและแอดมินโรงเรียน',d:'สำหรับผู้ดูแลระบบ',id:'1vvIIEzFpES2mK6evksx9eFGceTY7sWhD'},
+           {t:'คู่มือสำหรับผู้บริหารสถานศึกษา',d:'สำหรับ ผอ./รองผอ. · ติดตามผลและรายงานสรุปโรงเรียน · 9 หน้า',id:'1t9LGpwCBIKapTlYwVlTFqX72mbGePn9L'},
            {t:'คู่มือสำหรับแอดมินโรงเรียน',d:'ฉบับย่อสำหรับตัวแทนโรงเรียน · 8 หน้า',id:'1ytFHrNUABPzZj1nMGNIk62sE7OOgt96v'}]
 };
 const DRV=(...a)=>['https:','','drive.google.com',...a].join('/');
