@@ -282,6 +282,7 @@ input[type=checkbox],input[type=color]{min-height:0}
 .btn.del{color:var(--bad)}
 .btn[disabled]{opacity:.5;pointer-events:none}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+td.row{display:table-cell;white-space:nowrap}td.row>*{margin:2px 3px;vertical-align:middle}
 .sp{flex:1}
 .muted{color:var(--muted);font-size:13px}
 /* pills */
@@ -417,6 +418,7 @@ function loader(on){ $('#loader').classList.toggle('hide',!on); }
 function loaderText(t){ const e=document.querySelector('#loader > div:last-child'); if(e) e.textContent=t||'กำลังประมวลผลระบบ...'; }
 function toast(m){ const t=document.createElement('div'); t.className='toast'; t.textContent=m; document.body.appendChild(t); setTimeout(()=>t.remove(),2600); }
 const SW = {
+  okFolder:async(t,x,url)=>{ if(!url||!window.Swal) return SW.ok(t,x); const r=await Swal.fire({icon:'success',title:t,text:x||'',showCancelButton:true,confirmButtonText:'📂 เปิดโฟลเดอร์ที่เก็บไฟล์',cancelButtonText:'ปิด',confirmButtonColor:getCss('--p')}); if(r.isConfirmed) window.open(url,'_blank'); },
   ok:(t,x)=>window.Swal?Swal.fire({icon:'success',title:t,text:x||'',confirmButtonColor:getCss('--p'),timer:1800,showConfirmButton:false}):toast(t),
   err:(t,x)=>window.Swal?Swal.fire({icon:'error',title:t,text:x||'',confirmButtonColor:getCss('--p')}):alert(t+'\n'+(x||'')),
   confirm:async(t,x)=>window.Swal?(await Swal.fire({icon:'question',title:t,text:x||'',showCancelButton:true,confirmButtonText:'ยืนยัน',cancelButtonText:'ยกเลิก',confirmButtonColor:getCss('--p')})).isConfirmed:confirm(t)
@@ -425,8 +427,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.25';
+const APP_VERSION = '1.3.26';
 const APP_CHANGELOG = [
+  {v:'1.3.26', d:'14 พ.ย. 2569', n:['ข้อกระทงการนิเทศ: เลือกได้ว่ารูป/ไฟล์แนบ ศน. เป็นคนอัปโหลด หรือให้ครูอัปโหลด (ครูจะมีเมนู “ส่งผลงาน…” ของแบบนั้น)','ตั้งค่าระบบ › ⛔ ปิดการใช้งานชั่วคราว เลือกบทบาทที่จะปิดได้','สร้าง PDF เก็บใน Drive แล้วมีปุ่ม “เปิดโฟลเดอร์ที่เก็บไฟล์”','แก้ตาราง “แผนที่ส่งแล้ว” ปุ่มในคอลัมน์สุดท้ายแสดงผลขาด']},
   {v:'1.3.25', d:'13 พ.ย. 2569', n:['ตั้งค่า › ♻️ สร้างเอกสารใหม่: จดจำรายการที่สร้างใหม่แล้ว ถ้าค้างกลางทางกดซ้ำเพื่อทำต่อได้ (ซ่อนรายการที่เสร็จแล้วโดยอัตโนมัติ เลือกแสดงทั้งหมดได้)']},
   {v:'1.3.24', d:'12 พ.ย. 2569', n:['ลิงก์ “ศูนย์อัปเดต” ในหน้าอัปเดตระบบ ส่งรหัสโปรเจกต์ไปด้วย ศูนย์อัปเดตจึงมีปุ่มเปิดหน้าแก้โค้ดของระบบนั้นให้ทันที']},
   {v:'1.3.23', d:'12 พ.ย. 2569', n:['ออกแบบหน้าอัปเดตระบบใหม่: ขั้น 1–2 อยู่ในกล่องเดียวพร้อมปุ่ม “เปิดหน้าแก้โค้ด” เด่น ๆ และขั้น 3 เป็นภาพจำลองเคลื่อนไหวพร้อมปุ่มเลือกทีละขั้น']},
@@ -505,9 +508,9 @@ const rub = t=>((Store.settings||{}).rubrics||DEFAULT_RUBRICS)[t] || DEFAULT_RUB
 const RKINDS = {teach:'ประเมินการสอน (สังเกตการสอนในห้องเรียน)', plan:'ประเมินแผนการจัดการเรียนรู้', visit:'เยี่ยมชั้นเรียน (ดูสภาพห้องเรียน พฤติกรรมครูและนักเรียน)'};
 /* ตัวเลือกของแบบประเมิน (ติ๊กได้ในหน้าตั้งค่า): photos = จำนวนช่องแนบรูป 0–4 · files = จำนวนช่องแนบ PDF 0–3 · plan = เลือกแผนที่ครูส่งมาประเมิน · rank = แสดงวิทยฐานะครู
    ถ้าไม่ได้ตั้ง ใช้ค่าเริ่มต้นตามประเภทแบบ (ระบบเดิมจึงทำงานเหมือนเดิม) */
-const ROPT_DEF = {teach:{photos:2,files:0,plan:false,rank:false}, visit:{photos:2,files:0,plan:false,rank:false}, plan:{photos:0,files:0,plan:true,rank:true}};
+const ROPT_DEF = {teach:{photos:2,files:0,plan:false,rank:false,up:'sup'}, visit:{photos:2,files:0,plan:false,rank:false,up:'sup'}, plan:{photos:0,files:0,plan:true,rank:true,up:'sup'}};
 function roptsOf(r,t){ const d=ROPT_DEF[kindOfRub(r,t)], o=(r&&r.opts)||{}, cl=(v,a,b,x)=>{ v=Math.round(+v); return isFinite(v)?Math.max(a,Math.min(b,v)):x; };
-  return {photos:o.photos!=null?cl(o.photos,0,4,d.photos):d.photos, files:o.files!=null?cl(o.files,0,3,d.files):d.files, plan:o.plan!=null?!!o.plan:d.plan, rank:o.rank!=null?!!o.rank:d.rank, docsOff:Array.isArray(o.docsOff)?o.docsOff.filter(x=>typeof x==='string').slice(0,12):(Array.isArray(o.docs)?tfOn().map(b=>b.id).filter(x=>o.docs.indexOf(x)<0):[])}; }
+  return {photos:o.photos!=null?cl(o.photos,0,4,d.photos):d.photos, files:o.files!=null?cl(o.files,0,3,d.files):d.files, plan:o.plan!=null?!!o.plan:d.plan, rank:o.rank!=null?!!o.rank:d.rank, up:o.up==='teacher'?'teacher':'sup', docsOff:Array.isArray(o.docsOff)?o.docsOff.filter(x=>typeof x==='string').slice(0,12):(Array.isArray(o.docs)?tfOn().map(b=>b.id).filter(x=>o.docs.indexOf(x)<0):[])}; }
 const ropts = t=>roptsOf(rub(t),t);
 function kindOfRub(r,t){ if(r&&RKINDS[r.kind]) return r.kind; const n=String((r&&r.name)||'');
   const dk=(DEFAULT_RUBRICS[t]||{}).kind||'teach';
@@ -567,6 +570,7 @@ const NAV = [
   {g:'งานของครู'},
   {id:'submitPlan', t:'ส่งแผนการจัดการเรียนรู้', d:'อัปโหลดแผนและบันทึกหลังสอนเพื่อรับการประเมิน', ic:'up', roles:['Teacher'], p:['teacher']},
   {id:'booking', t:'ปฏิทินนิเทศ / จองวัน', d:'เลือกวันและคาบเรียนเพื่อรับการนิเทศ', ic:'cal', roles:['Admin','Supervisor','Teacher','SchoolAdmin'], p:['teacher','supervisor','admin']},
+  ...['A','B','C'].map(T=>({id:'work'+T, get t(){ return 'ส่งผลงาน'+rshort(T); }, get d(){ return 'อัปโหลดรูป/ไฟล์ของ “'+rub(T).name+'” เพื่อรับการประเมิน'; }, ic:'up', roles:['Teacher'], p:['teacher'], cond:()=>workOn(T)})),
   {id:'survey', t:'ประเมินความพึงพอใจ', d:'ประเมินความพึงพอใจต่อการนิเทศ (ไม่ระบุตัวตน)', ic:'heart', roles:['Teacher','User'], p:['teacher']},
   {g:'ข้อมูล & รายงานผล'},
   {id:'schooldash', t:'ภาพรวมโรงเรียน', d:'ข้อมูลและความคืบหน้าการนิเทศของโรงเรียนท่าน', ic:'dash', roles:['User'], p:['teacher']},
@@ -587,7 +591,7 @@ const NAV = [
   {id:'settings', t:'ตั้งค่าระบบ', d:'ข้อคำถาม ภาคเรียน/ปีการศึกษา สถานศึกษา และธีม', ic:'set', roles:['Admin'], p:['admin']}
 ];
 let cur = '';
-const navOk = n=>n.id && n.roles.includes(Store.user.role) && n.p.includes(Store.portal);
+const navOk = n=>n.id && (!n.cond||n.cond()) && n.roles.includes(Store.user.role) && n.p.includes(Store.portal);
 const allowed = id=>{ const n=NAV.find(x=>x.id===id); return n && navOk(n); };
 
 function shell(){
@@ -855,6 +859,7 @@ async function saveEval(){
     photos:[e.photo1,e.photo2,e.photo3,e.photo4].filter(Boolean), files:[e.file1,e.file2,e.file3].filter(Boolean), comment:e.comment, plan_id:((ropts(e.type).plan||(((Store.data.Evaluations||{})[e.eval_id]||{}).plan_id))?e.plan_id:'')||'', extra:e.extra||{}, pdf_drive_link:'', rubric:{...JSON.parse(JSON.stringify(rub(e.type))),kind:rkind(e.type),opts:ropts(e.type)}, created_at:new Date().toISOString(), created_by:Store.user.username };
   const ops=[{c:'Evaluations',op:'set',id,data:rec}], prv=(Store.data.Evaluations||{})[id];
   if(e.plan_id && (ropts(e.type).plan || (prv&&prv.plan_id&&prv.rubric&&roptsOf(prv.rubric,e.type).plan))) ops.push({c:'LessonPlans',op:'merge',id:e.plan_id,data:{status:'ประเมินแล้ว',eval_id:id,score:total}});
+  if(EV.work_id && (Store.data.Works||{})[EV.work_id]){ rec.work_id=EV.work_id; ops.push({c:'Works',op:'merge',id:EV.work_id,data:{status:'ประเมินแล้ว',eval_id:id,score:total}}); }
   await busy(()=>commit(ops));
   const mk = MODE==='gas' && await SW.confirm('บันทึกสำเร็จ','สร้างรายงาน PDF เก็บใน Drive พร้อมลายเซ็นเลยหรือไม่?');
   if(mk) await makePdf(id); else SW.ok('บันทึกผลการประเมินแล้ว');
@@ -982,7 +987,7 @@ async function makePdf(id){
   const pdf=await busy(()=>htmlToPdfB64(reportHtml(e)));
   const r=await busy(()=>gasCall('apiMakePdf',Store.token,JSON.stringify({pdf,filename:pdfName(e),year:e.year||'',sub:evalPath(e)+'/แบบ '+e.type+' '+clean(rubE(e).name).slice(0,40),eval_id:id})));
   Store.data.Evaluations[id].pdf_drive_link=r.url; FS.mirror([{c:'Evaluations',op:'merge',id,data:{pdf_drive_link:r.url}}]);
-  SW.ok('สร้าง PDF แล้ว'); if(cur==='history') render();
+  SW.okFolder('สร้าง PDF เก็บใน Drive แล้ว','',r.folder); if(cur==='history') render();
 }
 
 /* ================= VIEWS ================= */
@@ -1006,7 +1011,8 @@ function evalView(T){ if(!EV||EV.type!==T) newEval(T); const k=rkind(T), o=ropts
   const rank=o.rank?`<label class="f" style="max-width:340px;margin-bottom:10px"><span class="lh">วิทยฐานะของครู <span class="muted">(ดึงจากข้อมูลครูอัตโนมัติ)</span></span><select id="b_rank">${opt(rankOpts((EV.extra||{}).grade_rank||(Store.data.Users[EV.teacher_id]||{}).rank||''),(EV.extra||{}).grade_rank||(Store.data.Users[EV.teacher_id]||{}).rank||'')}</select></label>`:'';
   const note=k==='visit'?'<div class="muted">คลิกหัวข้อเพื่อเปิด/ปิดหมวด</div>':k==='teach'?'<div class="muted" style="margin-bottom:6px">5 = ดีมาก · 4 = ดี · 3 = ปานกลาง · 2 = พอใช้ · 1 = ปรับปรุง</div>':'';
   const pt=k==='visit'?'ภาพบรรยากาศห้องเรียน':k==='teach'?'ภาพการนิเทศ':'ภาพประกอบการนิเทศ';
-  return (o.plan?planWaitCard(o.docsOff):'')+progressBar()+evalGeneral()+photoCard(pt,o.photos)+fileCard(o.files)
+  const tw=o.up==='teacher'&&(o.photos>0||o.files>0);
+  return (o.plan?planWaitCard(o.docsOff):'')+(tw?workWaitCard(T):'')+progressBar()+evalGeneral()+photoCard(pt+(tw?' · จากผลงานที่ครูส่ง':''),o.photos)+fileCard(o.files)
     +`<div class="card glass reveal"><h3>${esc(rub(T).name)}</h3>${pre}${rank}${note}${questions(T,k==='visit')}</div>`+summaryCard(); }
 function evalAfter(T){ bindDrops(DZMETA); updateSummary(); initReveal();
   if(ropts(T).plan){ refreshBDocs(); const ft=$('#f_term'), fy=$('#f_year'); if(ft) ft.addEventListener('change',refreshBDocs); if(fy) fy.addEventListener('change',refreshBDocs); } }
@@ -1016,6 +1022,59 @@ function pullPlan(id){ const p=Store.data.LessonPlans[id]; const t=Store.data.Us
 
 
 ['A','B','C'].forEach(T=>{ VIEWS['eval'+T]=()=>evalView(T); AFTER['eval'+T]=()=>evalAfter(T); });
+
+/* ---------- ส่งผลงาน (ครูอัปโหลดรูป/ไฟล์ของแบบที่ ศน. เลือก “ครูเป็นคนอัปโหลด”) — ชุดข้อมูล Works ---------- */
+const workOn = T=>{ const o=ropts(T); return o.up==='teacher'&&(o.photos>0||o.files>0); };
+let WK_EDIT=null;
+function workKeys(T){ const o=ropts(T); return [...Array.from({length:o.photos},(_,i)=>'w_photo'+(i+1)),...Array.from({length:o.files},(_,i)=>'w_file'+(i+1))]; }
+function workView(T){
+  const u=Store.user, me=Store.data.Users[u.username]||u, o=ropts(T);
+  if(WK_EDIT&&WK_EDIT.type!==T) WK_EDIT=null;
+  if(!WK_EDIT) workKeys(T).forEach(k=>{ FORM[k]=FORM[k]||''; });
+  const p=WK_EDIT||{};
+  const mine=Object.values(Store.data.Works||{}).filter(x=>x.type===T&&x.teacher_id===u.username).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
+  const rk=p.rank!=null?p.rank:(me.rank||'');
+  return `<div class="card glass reveal"><h3>ข้อมูลพื้นฐานครู</h3><div class="grid g3">
+    <label class="f">ชื่อ-สกุล<input value="${esc(me.name||'')}" disabled></label>
+    <label class="f">โรงเรียน<input value="${esc(me.school||'')}" disabled></label>
+    <label class="f">วิทยฐานะ<select id="w_rank">${opt(rankOpts(rk),rk)}</select></label>
+    <label class="f">กลุ่มสาระการเรียนรู้<select id="w_group">${opt(['',...SUBJECTS],p.group||me.group||'')}</select></label>
+    <label class="f">รายวิชา<input id="w_subject" value="${esc(p.subject||'')}" placeholder="รหัส ชื่อวิชา"></label>
+    <label class="f">ชั้น<input id="w_level" value="${esc(p.grade_level||'')}" placeholder="เช่น ม.1/2"></label>
+    <label class="f">ภาค/ปีการศึกษา<div class="row"><select id="w_term" style="width:90px">${opt(['1','2'],p.term||Store.settings.term)}</select><input id="w_year" value="${esc(p.year||Store.settings.academic_year)}" style="flex:1"></div></label>
+    <label class="f" style="grid-column:span 2">หมายเหตุ / คำอธิบายผลงาน<input id="w_note" value="${esc(p.note||'')}" placeholder="ไม่บังคับ"></label>
+   </div></div>
+   <div class="card glass reveal"><h3>อัปโหลดผลงาน · ${esc(rub(T).name)}</h3><div class="muted" style="margin:-4px 0 12px">${o.photos?'รูปภาพ '+o.photos+' รูป':''}${o.photos&&o.files?' และ ':''}${o.files?'ไฟล์ PDF '+o.files+' ไฟล์':''} · อัปโหลดผิด กด ✕ แล้วอัปโหลดใหม่</div><div class="grid g2">
+    ${Array.from({length:o.photos},(_,i)=>dropzone('w_photo'+(i+1),'รูปที่ '+(i+1),IMGACC,FORM['w_photo'+(i+1)])).join('')}
+    ${Array.from({length:o.files},(_,i)=>dropzone('w_file'+(i+1),'ไฟล์ PDF ที่ '+(i+1),'application/pdf',FORM['w_file'+(i+1)])).join('')}</div>
+    <div class="row" style="margin-top:14px"><span class="sp"></span>${WK_EDIT?'<button class="btn" onclick="WK_EDIT=null;workClear(\''+T+'\');render()">ยกเลิกแก้ไข</button>':''}<button class="btn pri" onclick="saveWork('${T}')">💾 ${WK_EDIT?'บันทึกการแก้ไข':'บันทึกส่งผลงาน'}</button></div></div>
+   <div class="card glass reveal"><h3>ผลงานที่ส่งแล้ว</h3><div class="tw"><table><thead><tr><th>วันที่</th><th>วิชา / ชั้น</th><th>ไฟล์</th><th>สถานะ</th><th>คะแนน</th><th></th></tr></thead><tbody>
+    ${mine.length?mine.map(x=>`<tr><td>${thDate(x.created_at)}</td><td><b>${esc(x.subject||'-')}</b><div class="muted">${esc(x.grade_level||'')}</div></td><td>${workChips(x)}</td>
+     <td><span class="badge ${x.status==='ประเมินแล้ว'?'g':''}">${esc(x.status)}</span></td><td>${x.score!=null?(+x.score).toFixed(2):'-'}</td>
+     <td class="row">${x.status==='รอประเมิน'?`<button class="btn sm" onclick="editWork('${x.work_id}')">✏️ แก้ไข</button><button class="btn sm del" onclick="delWork('${x.work_id}')">🗑</button>`:''}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">ยังไม่มีผลงานที่ส่ง</td></tr>'}
+   </tbody></table></div></div>`; }
+function workClear(T){ workKeys(T).forEach(k=>{ FORM[k]=''; }); }
+function workChips(x){ const ph=(x.photos||[]).filter(Boolean), fl=(x.files||[]).filter(Boolean);
+  return `<div class="dchips">${ph.map((u,i)=>docChip(u,'รูป '+(i+1),'🖼️')).join('')}${fl.map((u,i)=>docChip(u,'PDF '+(i+1),'📎')).join('')}</div>`; }
+function editWork(id){ const w=(Store.data.Works||{})[id]; if(!w) return; WK_EDIT={...w}; workClear(w.type); (w.photos||[]).forEach((u,i)=>{ FORM['w_photo'+(i+1)]=u||''; }); (w.files||[]).forEach((u,i)=>{ FORM['w_file'+(i+1)]=u||''; }); render(); scrollTo({top:0,behavior:'smooth'}); }
+async function delWork(id){ if(!(await SW.confirm('ลบผลงานนี้?'))) return; await busy(()=>commit([{c:'Works',op:'delete',id}])); render(); }
+async function saveWork(T){ const o=ropts(T), u=Store.user, id=(WK_EDIT&&WK_EDIT.work_id)||uid('WK');
+  const photos=Array.from({length:o.photos},(_,i)=>FORM['w_photo'+(i+1)]||''), files=Array.from({length:o.files},(_,i)=>FORM['w_file'+(i+1)]||'');
+  if(![...photos,...files].some(Boolean)) return SW.err('กรุณาอัปโหลดรูปหรือไฟล์อย่างน้อย 1 รายการ');
+  const d={work_id:id, type:T, rubric_name:rub(T).name, teacher_id:u.username, school:u.school||'', group:val('w_group'), subject:val('w_subject'), grade_level:val('w_level'), rank:val('w_rank'),
+    term:val('w_term'), year:val('w_year'), note:val('w_note'), photos, files, status:'รอประเมิน', created_at:(WK_EDIT&&WK_EDIT.created_at)||new Date().toISOString()};
+  await busy(()=>commit([{c:'Works',op:'set',id,data:d}])); WK_EDIT=null; workClear(T); SW.ok('ส่งผลงานเรียบร้อย','รอ ศน. ประเมิน'); render(); }
+function workWaitCard(T){ const L=Object.values(Store.data.Works||{}).filter(x=>x.type===T&&x.status!=='ประเมินแล้ว').sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
+  return `<div class="card glass reveal"><h3>ผลงานที่ครูส่งมารอประเมิน <span class="badge">${L.length}</span></h3><div class="tw"><table>
+   <thead><tr><th>วันที่ส่ง</th><th>ครู</th><th>วิชา / ชั้น</th><th>ภาค/ปี</th><th>ไฟล์</th><th></th></tr></thead><tbody>
+   ${L.length?L.map(x=>`<tr><td>${thDate(x.created_at)}</td><td>${esc(uname(x.teacher_id))}</td><td><b>${esc(x.subject||'-')}</b><div class="muted">${esc(x.grade_level||'')}</div></td><td>${esc(x.term)}/${esc(x.year)}</td><td>${workChips(x)}</td>
+     <td><button class="btn sm pri" onclick="pullWork('${x.work_id}')">ดึงเข้าฟอร์ม →</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">ยังไม่มีผลงานที่ครูส่งมา</td></tr>'}
+   </tbody></table></div></div>`; }
+function pullWork(id){ const w=(Store.data.Works||{})[id]; if(!w) return; const t=Store.data.Users[w.teacher_id]||{};
+  const pr={work_id:id,teacher_id:w.teacher_id,subject:w.subject||'',group:w.group||t.group||'',grade_level:w.grade_level||'',term:w.term,year:w.year,school:w.school||t.school||mySchools()[0]||'',extra:{grade_rank:w.rank||t.rank||''}};
+  (w.photos||[]).forEach((u,i)=>{ if(i<4) pr['photo'+(i+1)]=u||''; }); (w.files||[]).forEach((u,i)=>{ if(i<3) pr['file'+(i+1)]=u||''; });
+  newEval(w.type,pr); render(); setTimeout(()=>{ const e=$('.sticky-prog'); if(e) e.scrollIntoView({behavior:'smooth'}); },100); toast('ดึงผลงานเข้าฟอร์มแล้ว'); }
+['A','B','C'].forEach(T=>{ VIEWS['work'+T]=()=>workView(T); AFTER['work'+T]=()=>{ bindDrops(k=>({section:'ผลงานครู',year:val('w_year')||Store.settings.academic_year,sub:'ภาคเรียนที่ '+(val('w_term')||Store.settings.term)+'/'+clean(Store.user.school||'ไม่ระบุโรงเรียน')+'/'+clean(Store.user.name),prefix:'แบบ'+T+'_'+ymd(new Date())+'_'})); initReveal(); }; });
 
 /* ---------- ส่งแผน ---------- */
 let PLAN_EDIT=null;
@@ -1040,7 +1099,7 @@ VIEWS.submitPlan = ()=>{
    <div class="card glass reveal"><h3>แผนที่ส่งแล้ว</h3><div class="tw"><table><thead><tr><th>วันที่</th>${u.role==='Admin'?'<th>ครู</th>':''}<th>วิชา / เรื่อง</th><th>สถานะ</th><th>คะแนน</th><th></th></tr></thead><tbody>
     ${mine.length?mine.map(x=>`<tr><td>${thDate(x.created_at)}</td>${u.role==='Admin'?`<td>${esc(uname(x.teacher_id))}</td>`:''}<td><b>${esc(x.subject)}</b><div class="muted">${esc(x.title)}</div></td>
      <td><span class="badge ${x.status==='ประเมินแล้ว'?'g':''}">${esc(x.status)}</span></td><td>${x.score!=null?(+x.score).toFixed(2):'-'}</td>
-     <td class="row"><button class="btn sm" onclick="viewPdf('${esc(x.pdf_plan_url)}','แผน')">📄</button>${x.status==='รอประเมิน'?`<button class="btn sm" onclick="editPlan('${x.plan_id}')">✏️</button><button class="btn sm del" onclick="delPlan('${x.plan_id}')">🗑</button>`:''}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">ยังไม่มีแผนที่ส่ง</td></tr>'}
+     <td class="row"><button class="btn sm" ${x.pdf_plan_url?'':'disabled'} onclick="viewPdf('${esc(x.pdf_plan_url)}','แผน')">📄 ดูแผน</button>${x.status==='รอประเมิน'?`<button class="btn sm" onclick="editPlan('${x.plan_id}')">✏️</button><button class="btn sm del" onclick="delPlan('${x.plan_id}')">🗑</button>`:''}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">ยังไม่มีแผนที่ส่ง</td></tr>'}
    </tbody></table></div></div>`;
 };
 AFTER.submitPlan = ()=>{ bindDrops(k=>({section:'แผนการจัดการเรียนรู้',year:val('p_year')||Store.settings.academic_year,sub:'ภาคเรียนที่ '+(val('p_term')||Store.settings.term)+'/'+clean(Store.user.school||'ไม่ระบุโรงเรียน')+'/'+clean(Store.user.name),prefix:(k==='pdf_plan'?'แผน_':k==='post_note'?'หลังสอน_':clean((tfBlocks().find(b=>b.id===k)||{}).label||'ไฟล์')+'_')+ymd(new Date())+'_'})); initReveal(); };
@@ -1553,7 +1612,7 @@ function showGenAcc(){ const g=GENACC; window.GENACC_OPEN=true;
      <button class="btn acc" onclick="genAccPrint()">🖨️ พิมพ์ / บันทึก PDF</button>${MODE==='gas'&&['Admin','Supervisor'].includes(Store.user.role)?'<button class="btn pri" onclick="genAccDrive()">📄 สร้าง PDF เก็บใน Drive</button>':''}<button class="btn" onclick="genAccClose()">ปิด</button></div>`,'900px'); }
 function genAccPrint(){ const w=window.open('','_blank'); if(!w) return SW.err('เบราว์เซอร์บล็อกหน้าต่างใหม่'); w.document.write(genAccHtml()); w.document.close(); setTimeout(()=>w.print(),600); }
 async function genAccDrive(){ const pdf=await busy(()=>htmlToPdfB64(genAccHtml())); const r=await busy(()=>gasCall('apiMakePdf',Store.token,JSON.stringify({pdf,filename:'บัญชีผู้ใช้_'+GENACC.school+'_'+ymd(new Date())+issueSuf(GENACC.no),sub:'บัญชีผู้ใช้ (ลับ)'})));
-  window.open(r.url,'_blank'); toast('สร้าง PDF ใน Drive แล้ว'); }
+  window.open(r.url,'_blank'); SW.okFolder('สร้าง PDF ใน Drive แล้ว','',r.folder); }
 function genAccCsv(){ csv('บัญชีผู้ใช้_'+GENACC.school+issueSuf(GENACC.no),[['ที่','ชื่อ-สกุล','ตำแหน่ง','Username','Password'],...GENACC.accounts.map((a,i)=>[i+1,a.name,a.position,a.username,a.password])]); }
 /* ===== สร้างรหัสแอดมินโรงเรียน (แอดมินระบบ) ===== */
 let SAGEN=null, SAM='pick', SAI=0;
@@ -1682,7 +1741,7 @@ async function saBuildPdf(){
 }
 async function saPdf(mode){ if(!SAGEN) return;
   const r=await busy(()=>saBuildPdf()), fname='รหัสแอดมินโรงเรียน_'+clean(SAGEN.school)+'_'+ymd(new Date())+issueSuf(SAGEN.no);
-  if(mode==='drive'){ const x=await busy(()=>gasCall('apiMakePdf',Store.token,JSON.stringify({pdf:r.b64,filename:fname,sub:'บัญชีผู้ใช้ (ลับ)'}))); window.open(x.url,'_blank'); toast('เก็บ PDF ใน Drive แล้ว'); }
+  if(mode==='drive'){ const x=await busy(()=>gasCall('apiMakePdf',Store.token,JSON.stringify({pdf:r.b64,filename:fname,sub:'บัญชีผู้ใช้ (ลับ)'}))); window.open(x.url,'_blank'); SW.okFolder('เก็บ PDF ใน Drive แล้ว','',x.folder); }
   else { saveBlob(new Blob([b64ToBytes(r.b64)],{type:'application/pdf'}),fname+'.pdf'); toast('ดาวน์โหลด PDF แล้ว'); }
   if(!r.manual) SW.err('แนบคู่มือไม่สำเร็จ','ได้เฉพาะหน้าข้อมูลรหัส · ดาวน์โหลดคู่มือแอดมินโรงเรียนแยกได้ที่ปุ่ม “ดาวน์โหลดคู่มือ” หน้าแรก');
 }
@@ -1839,7 +1898,7 @@ async function tfSave(){ const L=TFB.map(b=>({id:b.id,label:String(b.label||'').
 function rbDoc(id,chk){ const O=roptsOf(RB[RBT],RBT); let off=O.docsOff.filter(x=>x!==id); if(!chk) off.push(id); const n={...O,docsOff:off}; delete n.docs; RB[RBT].opts=n; render(); }
 function rbOpt(k,v){ RB[RBT].opts={...roptsOf(RB[RBT],RBT),[k]:v}; render(); }
 VIEWS.settings = ()=>{
-  const s=Store.settings, si=s.school_info||{}, T=[['rubric','ข้อคำถาม A/B/C'],['tfiles','📤 ช่องอัปโหลดฝั่งครู'],['clear','🧹 ล้างข้อมูล'],['demo','🧪 ข้อมูลจำลอง'],['year','ภาคเรียน/ปีการศึกษา'],['school','สถานศึกษา & คาบเรียน'],['storage','💾 พื้นที่จัดเก็บ'],['export','📤 ส่งออกข้อมูลประเมิน'],['docs','📄 ตัวอย่างเอกสาร'],['regen','♻️ สร้างเอกสารใหม่'],['theme','ธีมสี'],['update','🔄 อัปเดตระบบ']];
+  const s=Store.settings, si=s.school_info||{}, T=[['rubric','ข้อคำถาม A/B/C'],['tfiles','📤 ช่องอัปโหลดฝั่งครู'],['clear','🧹 ล้างข้อมูล'],['demo','🧪 ข้อมูลจำลอง'],['year','ภาคเรียน/ปีการศึกษา'],['school','สถานศึกษา & คาบเรียน'],['storage','💾 พื้นที่จัดเก็บ'],['export','📤 ส่งออกข้อมูลประเมิน'],['docs','📄 ตัวอย่างเอกสาร'],['regen','♻️ สร้างเอกสารใหม่'],['theme','ธีมสี'],['maint','⛔ ปิดการใช้งานชั่วคราว'],['update','🔄 อัปเดตระบบ']];
   let body='';
   if(STAB==='rubric'){ if(!RB) RB=JSON.parse(JSON.stringify(s.rubrics||DEFAULT_RUBRICS)); const R=RB[RBT], n=R.cats.reduce((a,c)=>a+c.items.length,0);
     body=`<div class="row" style="margin-bottom:12px">${['A','B','C'].map(t=>`<button class="tab ${RBT===t?'on':''}" onclick="RBT='${t}';render()">แบบ ${t}</button>`).join('')}<span class="sp"></span>
@@ -1854,6 +1913,7 @@ VIEWS.settings = ()=>{
        +row(O.files>0,"rbOpt('files',this.checked?1:0)",'ให้แนบไฟล์ PDF',O.files>0?'<span class="muted" style="margin-left:8px">จำนวนไฟล์</span>'+cnt('files',3):'','ตัวอย่าง: อยากเก็บใบงานหรือเอกสารที่ครูใช้สอนในคาบนั้นไว้กับผลประเมิน ให้ติ๊กข้อนี้ แล้วเลือกจำนวนไฟล์')
        +row(O.plan,"rbOpt('plan',this.checked)",'ให้เลือกแผนที่ครูส่งมาประเมิน','','ตัวอย่าง: แบบประเมินแผนการจัดการเรียนรู้ จะมีรายการแผนที่ครูส่งมา กดเลือกแผนแล้วเปิดดูแผนไปพร้อมกับให้คะแนนได้เลย')
        +(O.plan?`<div style="margin:0 0 8px 26px"><div style="font-size:13px"><b>ไฟล์ของครูที่ให้เปิดดูได้ในหน้าประเมิน</b> <span class="muted">(ติ๊กได้หลายไฟล์ ไม่ติ๊กจะไม่แสดงในแบบนี้)</span></div>${tfOn().map(b=>`<label style="display:inline-flex;gap:6px;align-items:center;margin:4px 14px 0 0;cursor:pointer"><input type="checkbox" style="width:auto" ${O.docsOff.indexOf(b.id)<0?'checked':''} onchange="rbDoc('${b.id}',this.checked)">${esc(tfShort(b))}</label>`).join('')}<div class="muted" style="font-size:12.5px;margin-top:4px">ตัวอย่าง: นอกจากแผนฯ ถ้าครูแนบ “ใบงาน” หรือ “สื่อการสอน” มาด้วย ติ๊กไว้ ท่านจะเปิดดูไฟล์เหล่านั้นได้จากหน้าประเมินเลย (แอดมินระบบเพิ่มช่องไฟล์ได้ที่ ตั้งค่า → ช่องอัปโหลดฝั่งครู)</div></div>`:'')
+       +((O.photos>0||O.files>0)?`<div style="margin:2px 0 10px 26px;padding:10px 12px;border:1px dashed rgba(249,115,22,.45);border-radius:14px"><div style="font-size:13px"><b>ใครเป็นคนอัปโหลดรูป/ไฟล์ของแบบนี้</b></div>${[['sup','1) ศน. เป็นคนอัปโหลด (ในหน้าประเมิน)'],['teacher','2) ครูเป็นคนอัปโหลด (ครูจะมีเมนู “ส่งผลงาน'+esc(rshort(RBT))+'”)']].map(([v,l])=>`<label style="display:flex;gap:8px;align-items:center;margin:6px 0 0;cursor:pointer"><input type="radio" name="rbup" style="width:auto" ${O.up===v?'checked':''} onchange="rbOpt('up','${v}')">${l}</label>`).join('')}<div class="muted" style="font-size:12.5px;margin-top:4px">ตัวอย่าง: เลือกข้อ 2) ครูจะส่งรูป ${O.photos} รูป${O.files?' และไฟล์ PDF '+O.files+' ไฟล์':''} มาก่อน แล้ว ศน. กด “ดึงเข้าฟอร์ม” ในหน้าประเมินได้เลย</div></div>`:'')
        +row(O.rank,"rbOpt('rank',this.checked)",'แสดงวิทยฐานะของครู','','ตัวอย่าง: ถ้าอยากให้ผลประเมินระบุวิทยฐานะของครู เช่น ชำนาญการ ให้ติ๊กข้อนี้ (ระบบดึงจากข้อมูลครูให้อัตโนมัติ)')+'</div>'; })()}
      ${R.cats.map((c,ci)=>`<div class="acc-h" style="cursor:default"><input value="${esc(c.name)}" onchange="RB.${RBT}.cats[${ci}].name=this.value" style="font-weight:600"><button class="btn sm del" onclick="RB.${RBT}.cats.splice(${ci},1);render()">ลบหมวด</button></div>
        ${c.items.map((x,ii)=>`<div class="row" style="margin:4px 0 4px 20px"><span class="muted" style="width:28px">${ii+1}.</span><input value="${esc(x)}" onchange="RB.${RBT}.cats[${ci}].items[${ii}]=this.value" style="flex:1"><button class="btn sm del" onclick="RB.${RBT}.cats[${ci}].items.splice(${ii},1);render()">✕</button></div>`).join('')}
@@ -1911,6 +1971,11 @@ VIEWS.settings = ()=>{
        <button class="btn" style="color:var(--bad)" ${n?'':'disabled'} onclick="clearDemo()">🗑 ล้างข้อมูลจำลอง</button></div></div>`; }
   if(STAB==='update') body=`<div id="updBox"><div class="muted">กำลังตรวจสอบเวอร์ชัน…</div></div>`;
   if(STAB==='regen') body=regenTab();
+  if(STAB==='maint'){ const m=s.maint||{}, on=m.roles||[];
+    body=`<div class="muted" style="margin-bottom:12px;font-size:13.5px;line-height:1.7">ใช้ตอนกำลังแก้ไข/อัปเดตระบบ และอยากให้ผู้ใช้หยุดใช้งานชั่วคราว · ติ๊กบทบาทที่ต้องการปิด แล้วกดบันทึก<br>• ผู้ใช้บทบาทที่ถูกปิดจะเข้าสู่ระบบไม่ได้ และคนที่ใช้งานอยู่จะถูกออกจากระบบเมื่อกดทำรายการครั้งถัดไป<br>• แอดมินระบบใช้งานได้ตลอด (ปิดไม่ได้) · เสร็จแล้วอย่าลืมกลับมาเอาติ๊กออก</div>
+     ${[['Supervisor','ศึกษานิเทศก์ (ศน.)'],['Teacher','ครู'],['User','ผู้บริหาร'],['SchoolAdmin','แอดมินโรงเรียน']].map(([k,l])=>`<label style="display:flex;gap:8px;align-items:center;margin:8px 0;cursor:pointer"><input type="checkbox" class="mt_role" value="${k}" style="width:auto" ${on.includes(k)?'checked':''}><b>${l}</b>${on.includes(k)?'<span class="badge" style="background:#FEE2E2;color:#B91C1C">ปิดอยู่</span>':''}</label>`).join('')}
+     <label class="f" style="margin-top:10px">ข้อความแจ้งผู้ใช้<input id="mt_msg" value="${esc(m.msg||'')}" placeholder="เช่น ปิดปรับปรุงระบบถึงเวลา 18.00 น."></label>
+     <div class="row" style="margin-top:14px"><button class="btn ghost" onclick="document.querySelectorAll('.mt_role').forEach(c=>c.checked=false)">เปิดใช้งานทุกบทบาท</button><span class="sp"></span><button class="btn pri" onclick="saveMaint()">💾 บันทึก</button></div>`; }
   return `<div class="tabs">${T.map(t=>`<div class="tab ${STAB===t[0]?'on':''}" onclick="STAB='${t[0]}';render()">${t[1]}</div>`).join('')}</div><div class="card glass">${body}</div>`;
 };
 AFTER.settings=()=>{ if(STAB==='school') bindDrops({section:'สถานศึกษา',prefix:'logo_'}); if(STAB==='storage') renderUsage(false); if(STAB==='update') updRender(); };
@@ -1940,16 +2005,16 @@ function regenAll(on){ regenList().forEach(e=>RG.sel[e.eval_id]=on); render(); }
 async function regenRun(){ if(MODE!=='gas') return SW.err('ใช้ได้เมื่อเปิดผ่าน Web app');
   const L=regenList().filter(e=>RG.sel[e.eval_id]); if(!L.length) return;
   if(!(await SW.confirm('สร้างเอกสารใหม่ '+L.length+' รายการ?','ไฟล์ PDF เดิมจะถูกย้ายไปถังขยะ และแทนที่ด้วยไฟล์ใหม่'))) return;
-  const bad=[]; let ok=0; loader(true);
+  const bad=[]; let ok=0, rootUrl=''; loader(true);
   try{ for(let i=0;i<L.length;i++){ const e=L[i]; loaderText('กำลังสร้างเอกสาร '+(i+1)+' / '+L.length+' · '+uname(e.teacher_id)+' แบบ '+e.type);
       try{ const pdf=await htmlToPdfB64(reportHtml(e));
         const r=await gasCall('apiMakePdf',Store.token,JSON.stringify({pdf,filename:pdfName(e),year:e.year||'',sub:evalPath(e)+'/แบบ '+e.type+' '+clean(rubE(e).name).slice(0,40),eval_id:e.eval_id,regen:APP_VERSION}));
-        Store.data.Evaluations[e.eval_id].pdf_drive_link=r.url; Store.data.Evaluations[e.eval_id].pdf_regen_ver=APP_VERSION; FS.mirror([{c:'Evaluations',op:'merge',id:e.eval_id,data:{pdf_drive_link:r.url,pdf_regen_ver:APP_VERSION}}]); ok++;
+        Store.data.Evaluations[e.eval_id].pdf_drive_link=r.url; Store.data.Evaluations[e.eval_id].pdf_regen_ver=APP_VERSION; FS.mirror([{c:'Evaluations',op:'merge',id:e.eval_id,data:{pdf_drive_link:r.url,pdf_regen_ver:APP_VERSION}}]); ok++; rootUrl=r.root||r.folder||rootUrl;
       }catch(err){ bad.push(uname(e.teacher_id)+' แบบ '+e.type+': '+(err.message||err)); } } }
   finally{ loader(false); loaderText(''); }
   render();
   if(bad.length) SW.err('สร้างเสร็จ '+ok+' รายการ · ไม่สำเร็จ '+bad.length+' รายการ',bad.slice(0,5).join('\n')+(bad.length>5?'\n…':''));
-  else SW.ok('สร้างเอกสารใหม่เรียบร้อย '+ok+' รายการ'); }
+  else SW.okFolder('สร้างเอกสารใหม่เรียบร้อย '+ok+' รายการ','',rootUrl); }
 /* ===== อัปเดตระบบ: ตรวจเวอร์ชัน + คัดลอกโค้ด + เปิดหน้าแก้โค้ด (เจ้าของเป็นคน deploy) ===== */
 let UPD=null;
 const UPM_STEPS=[['เลือกไฟล์','ที่แถบซ้ายคลิก <b>รหัส.gs</b> (แล้วทำซ้ำกับ <b>index.html</b>)'],
@@ -2126,6 +2191,7 @@ async function saveRubrics(){
   ['A','B','C'].forEach(t=>{ if(RB[t]) RB[t].kind=kindOfRub(RB[t],t); RB[t].opts=roptsOf(RB[t],t); });
   await saveSet({rubrics:RB});
 }
+async function saveMaint(){ const roles=[...document.querySelectorAll('.mt_role:checked')].map(c=>c.value); if(roles.length&&!(await SW.confirm('ปิดการใช้งาน '+roles.map(r=>ROLE_TH[r]).join(', ')+'?','ผู้ใช้บทบาทนี้จะใช้งานไม่ได้จนกว่าจะเปิดอีกครั้ง'))) return; await saveSet({maint:{roles,msg:val('mt_msg'),at:new Date().toISOString()}}); }
 async function saveSet(d){ await busy(()=>commit([{c:'Settings',op:'merge',id:'main',data:d}])); if(d.rubrics) RB=null; if(d.teacher_files) TFB=null; SW.ok('บันทึกการตั้งค่าแล้ว'); shell(); go(allowed(cur)?cur:'settings'); }
 function saveSchool(){ const s=Store.settings; saveSet({ school_info:{...s.school_info,name:val('s_sname'),affiliation:val('s_aff'),director:val('s_dir'),logo:FORM.logo!=null?FORM.logo:s.school_info.logo},
   periods:s.periods.map((p,i)=>({no:p.no,time:val('pr_'+i)})) }); refreshLogoData(); }

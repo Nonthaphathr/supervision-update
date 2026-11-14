@@ -6,7 +6,7 @@
  ******************************************************/
 const APP_NAME = 'ระบบนิเทศและประเมินการสอน';
 const ROOT_FOLDER_ID = '';           // ใส่ ID โฟลเดอร์ Drive หลัก (ว่าง = สร้างให้อัตโนมัติ)
-const COLLS = ['Users','Evaluations','LessonPlans','Bookings','Settings','Schools'];
+const COLLS = ['Users','Evaluations','LessonPlans','Bookings','Settings','Schools','Works'];
 const SESSION_HOURS = 5;
 
 /* ---------------- Web entry ---------------- */
@@ -145,6 +145,7 @@ function apiLogin(username, password, portal){
   const u = Object.values(users).find(x=>String(x.username).toLowerCase()===un);
   if (!u || u.pass !== hash_(password)) throw new Error('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
   if (u.status !== 'active') throw new Error('บัญชีนี้ถูกระงับการใช้งาน');
+  maint_(u, false);
   if (portal && PORTAL_ROLES[portal] && PORTAL_ROLES[portal].indexOf(u.role)<0){
     const right = Object.keys(PORTAL_ROLES).find(k=>PORTAL_ROLES[k].indexOf(u.role)>=0);
     throw new Error('บัญชีนี้ไม่ได้อยู่ในส่วน "'+PORTAL_TH[portal]+'" — กรุณาเข้าสู่ระบบที่การ์ด "'+PORTAL_TH[right]+'"');
@@ -163,7 +164,16 @@ function me_(token){
   if (!name) throw new Error('AUTH_EXPIRED: เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
   const u = Object.values(readColl_('Users')).find(x=>x.username===name);
   if (!u || u.status!=='active') throw new Error('AUTH_EXPIRED: บัญชีไม่พร้อมใช้งาน');
+  maint_(u, true);
   return u;
+}
+/* ปิดการใช้งานชั่วคราว (ตั้งค่าโดยแอดมินระบบ): settings.maint.roles = บทบาทที่ปิด · แอดมินระบบใช้ได้เสมอ */
+const ROLE_TH_ = {Teacher:'ครู', User:'ผู้บริหาร', Supervisor:'ศึกษานิเทศก์', SchoolAdmin:'แอดมินโรงเรียน'};
+function maint_(u, expire){
+  if (u.role==='Admin') return;
+  const m = getSettings_().maint || {};
+  if ((m.roles||[]).indexOf(u.role)<0) return;
+  throw new Error((expire?'AUTH_EXPIRED: ':'')+'ขณะนี้ปิดการใช้งานชั่วคราวสำหรับบทบาท '+(ROLE_TH_[u.role]||u.role)+(m.msg?' — '+m.msg:' กรุณาลองใหม่ภายหลัง'));
 }
 /* เปลี่ยนชื่อผู้ใช้ (เฉพาะ Admin): ย้ายบัญชี แผน ผลประเมิน การจอง ไปใช้ชื่อใหม่ รหัสผ่านเดิมคงไว้ */
 function apiRenameUser(token, oldUn, newUn){
@@ -212,7 +222,7 @@ function scope_(u){
 function evBy_(x, un){ return (x.evaluators||[]).indexOf(un)>=0 || x.evaluator1===un || x.evaluator2===un || x.updated_by===un; }
 function loadFor_(u){
   const users = readColl_('Users'), ev = readColl_('Evaluations'),
-        lp = readColl_('LessonPlans'), bk = readColl_('Bookings'), sc = readColl_('Schools');
+        lp = readColl_('LessonPlans'), bk = readColl_('Bookings'), sc = readColl_('Schools'), wk = readColl_('Works');
   const sc_ = scope_(u), inS = s => !sc_ || sc_.indexOf(s||'')>=0;
   const pubUsers = {};
   Object.keys(users).forEach(k=>{ const x = publicUser_(users[k]);
@@ -240,8 +250,9 @@ function loadFor_(u){
     Object.keys(pubUsers).forEach(k=>{ const x=pubUsers[k]; if (k!==u.username && x.role!=='Supervisor' && x.role!=='Admin') delete pubUsers[k]; });
   }
   S = pick(sc, x=>inS(x.name));
+  const W = u.role==='Teacher' ? pick(wk, x=>x.teacher_id===u.username) : pick(wk, x=>inS(x.school || schoolOf(x.teacher_id)));
   const SV = (u.role==='Admin'||u.role==='Supervisor') ? pick(readColl_('Surveys'), x=>!x.school||inS(x.school)) : {};
-  return { Users:pubUsers, Evaluations:E, LessonPlans:L, Bookings:B, Schools:S, Surveys:SV, settings:getSettings_() };
+  return { Users:pubUsers, Evaluations:E, LessonPlans:L, Bookings:B, Schools:S, Works:W, Surveys:SV, settings:getSettings_() };
 }
 
 /* ---------------- Generic commit with RBAC ---------------- */
@@ -305,6 +316,14 @@ function authorize_(u, o){
     if (o.op==='delete') { const cur = readColl_('LessonPlans')[o.id]; if (cur && cur.teacher_id===u.username && cur.status==='รอประเมิน') return; }
     if (o.data && o.data.teacher_id===u.username) return;
     throw new Error('ส่งแผนได้เฉพาะของตนเอง');
+  }
+  if (o.c==='Works'){   /* ผลงานที่ครูอัปโหลด (แบบที่ ศน. ตั้งให้ครูเป็นคนอัปโหลด) */
+    if (r==='Admin'||r==='Supervisor') return;
+    if (r==='Teacher'){ const cur = readColl_('Works')[o.id];
+      if (cur && (cur.teacher_id!==u.username || cur.status==='ประเมินแล้ว')) throw new Error('แก้ไข/ลบได้เฉพาะผลงานของตนเองที่ยังไม่ถูกประเมิน');
+      if (o.op==='delete') { if (cur) return; throw new Error('ไม่พบผลงาน'); }
+      if (o.data && o.data.teacher_id===u.username){ o.data.school = u.school||''; o.data.status = 'รอประเมิน'; delete o.data.score; delete o.data.eval_id; return; } }
+    throw new Error('ส่งผลงานได้เฉพาะของตนเอง');
   }
   if (o.c==='Bookings'){
     if (r==='Admin'||r==='Supervisor') return;
@@ -778,7 +797,7 @@ function apiMakePdf(token, json){
   try{ f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); }catch(e){}
   const url = 'https://drive.google.com/file/d/'+f.getId()+'/view';
   if (p.eval_id){ writeColl_('Evaluations',[{op:'merge', id:p.eval_id, data:(p.regen?{pdf_drive_link:url, pdf_regen_ver:String(p.regen)}:{pdf_drive_link:url})}]); }
-  return JSON.stringify({ok:true, url});
+  return JSON.stringify({ok:true, url, folder: dir.getUrl(), root: folder_('รายงาน PDF', p.year ? yearDir_(p.year) : root_()).getUrl()});
 }
 
 /* ---------------- ครั้งแรก: กดรันเพื่อขอสิทธิ์ ---------------- */
