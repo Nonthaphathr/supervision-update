@@ -427,8 +427,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.26';
+const APP_VERSION = '1.3.27';
 const APP_CHANGELOG = [
+  {v:'1.3.27', d:'14 พ.ย. 2569', n:['ครู: เมื่อได้รับการนิเทศครบ A·B·C จะมีหน้าต่างแจ้ง “ประเมินเสร็จสิ้น” พร้อมทางลัด ประเมินความพึงพอใจ / เอกสารสรุปผล / เกียรติบัตร','ครูที่ผลเข้าเกณฑ์มีเมนู “พิมพ์เกียรติบัตร” ดาวน์โหลด PDF ได้เอง หลัง ศน. ออกเกียรติบัตรแล้ว','ผู้บริหาร: ดาวน์โหลดรายงานสรุปผลการนิเทศโรงเรียนฉบับเต็ม (ปก คำนำ ผลรายบุคคล ข้อเสนอแนะ) เป็น PDF']},
   {v:'1.3.26', d:'14 พ.ย. 2569', n:['ข้อกระทงการนิเทศ: เลือกได้ว่ารูป/ไฟล์แนบ ศน. เป็นคนอัปโหลด หรือให้ครูอัปโหลด (ครูจะมีเมนู “ส่งผลงาน…” ของแบบนั้น)','ตั้งค่าระบบ › ⛔ ปิดการใช้งานชั่วคราว เลือกบทบาทที่จะปิดได้','สร้าง PDF เก็บใน Drive แล้วมีปุ่ม “เปิดโฟลเดอร์ที่เก็บไฟล์”','แก้ตาราง “แผนที่ส่งแล้ว” ปุ่มในคอลัมน์สุดท้ายแสดงผลขาด']},
   {v:'1.3.25', d:'13 พ.ย. 2569', n:['ตั้งค่า › ♻️ สร้างเอกสารใหม่: จดจำรายการที่สร้างใหม่แล้ว ถ้าค้างกลางทางกดซ้ำเพื่อทำต่อได้ (ซ่อนรายการที่เสร็จแล้วโดยอัตโนมัติ เลือกแสดงทั้งหมดได้)']},
   {v:'1.3.24', d:'12 พ.ย. 2569', n:['ลิงก์ “ศูนย์อัปเดต” ในหน้าอัปเดตระบบ ส่งรหัสโปรเจกต์ไปด้วย ศูนย์อัปเดตจึงมีปุ่มเปิดหน้าแก้โค้ดของระบบนั้นให้ทันที']},
@@ -571,6 +572,7 @@ const NAV = [
   {id:'submitPlan', t:'ส่งแผนการจัดการเรียนรู้', d:'อัปโหลดแผนและบันทึกหลังสอนเพื่อรับการประเมิน', ic:'up', roles:['Teacher'], p:['teacher']},
   {id:'booking', t:'ปฏิทินนิเทศ / จองวัน', d:'เลือกวันและคาบเรียนเพื่อรับการนิเทศ', ic:'cal', roles:['Admin','Supervisor','Teacher','SchoolAdmin'], p:['teacher','supervisor','admin']},
   ...['A','B','C'].map(T=>({id:'work'+T, get t(){ return 'ส่งผลงาน'+rshort(T); }, get d(){ return 'อัปโหลดรูป/ไฟล์ของ “'+rub(T).name+'” เพื่อรับการประเมิน'; }, ic:'up', roles:['Teacher'], p:['teacher'], cond:()=>workOn(T)})),
+  {id:'mycert', t:'พิมพ์เกียรติบัตร', d:'ดาวน์โหลดเกียรติบัตรของท่านเป็นไฟล์ PDF', ic:'cert', roles:['Teacher'], p:['teacher'], cond:()=>myCerts().length>0},
   {id:'survey', t:'ประเมินความพึงพอใจ', d:'ประเมินความพึงพอใจต่อการนิเทศ (ไม่ระบุตัวตน)', ic:'heart', roles:['Teacher','User'], p:['teacher']},
   {g:'ข้อมูล & รายงานผล'},
   {id:'schooldash', t:'ภาพรวมโรงเรียน', d:'ข้อมูลและความคืบหน้าการนิเทศของโรงเรียนท่าน', ic:'dash', roles:['User'], p:['teacher']},
@@ -2358,7 +2360,8 @@ function certIssueHtml(){ const cfg=certCfg(), E=certScope(), years=[...new Set(
     <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:10px"><b>น้ำหนักคะแนน (%)</b>${['A','B','C'].map(t=>`<label class="row" style="gap:6px">${t}<input type="number" min="0" max="100" value="${AGW[t]}" style="width:76px" onchange="AGW.${t}=+this.value||0;render()"></label>`).join('')}
      <span class="muted" style="font-size:12.5px">ใช้ค่าเดียวกับเมนูสรุปผลกรรมการ · นับเฉพาะการประเมินที่ครบทุกข้อ</span></div>
     <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap"><span class="badge y">เข้าเกณฑ์ ${okN} จาก ${tot} คน</span><span class="muted" style="font-size:13px">เกณฑ์ระดับ: ${cfg.grades.length?cfg.grades.map(esc).join(' · '):'<b style="color:var(--bad)">ยังไม่ได้เลือกระดับ</b>'}</span>
-     <a href="#" onclick="certTab('set');return false" style="font-size:13px">ตั้งค่าเกียรติบัตร</a></div></div>
+     <a href="#" onclick="certTab('set');return false" style="font-size:13px">ตั้งค่าเกียรติบัตร</a></div>
+    <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">${certPubOf(CERT.year,CERT.term)?`<span class="badge g">✅ ครูดาวน์โหลดเกียรติบัตรของ${CERT.term?'ภาคเรียนที่ '+esc(CERT.term)+'/':'ปีการศึกษา '}${esc(CERT.year)} เองได้แล้ว</span><button class="btn sm" onclick="certPubSet(false)">ปิดไม่ให้ครูดาวน์โหลด</button>`:`<span class="muted" style="font-size:13px">ครูยังดาวน์โหลดเกียรติบัตรชุดนี้เองไม่ได้ (เปิดให้อัตโนมัติเมื่อท่านสร้างเกียรติบัตร)</span><button class="btn sm" onclick="certPubSet(true)">📢 เปิดให้ครูดาวน์โหลดเอง</button>`}</div></div>
   ${G.map((g,gi)=>`<div class="card glass reveal"><div class="row" style="flex-wrap:wrap;gap:8px"><b>${esc(g.school)}</b><span class="badge ${g.ok.length?'g':''}">${g.ok.length} คนได้รับ</span><span class="muted" style="font-size:12.5px">จากครู ${g.rows.length} คน</span><span class="sp"></span>
     <button class="btn sm" ${certSel(g).length?'':'disabled'} onclick="certZip(${gi})">📦 ZIP (PDF รายคน)</button><button class="btn sm pri" ${certSel(g).length?'':'disabled'} onclick="certMerged(${gi})">📄 PDF รวมเล่ม</button></div>
     ${g.ok.length?`<div class="tw" style="margin-top:10px"><table><thead><tr><th style="width:44px"></th><th>#</th><th>ชื่อ-สกุล</th><th>คะแนนถ่วงน้ำหนัก</th><th>ระดับ</th><th>ครั้ง</th><th></th></tr></thead><tbody>
@@ -2382,10 +2385,10 @@ async function certPdf(htmls,onP){ let doc=null, N0=0;
   return new Uint8Array(doc.output('arraybuffer')); }
 const pdfBlob=b=>new Blob([b],{type:'application/pdf'});
 async function certOne(gi,ri){ const r=CERT_G[gi].ok[ri]; if(!r) return;
-  await busy(async()=>{ const cfg=await certPrep([r]); const b=await certPdf([certHtml(certRec(r),cfg)]); saveBlob(pdfBlob(b),'เกียรติบัตร_'+clean(r.name)+'.pdf'); }); toast('ดาวน์โหลดเกียรติบัตรแล้ว'); }
+  await busy(async()=>{ const cfg=await certPrep([r]); const b=await certPdf([certHtml(certRec(r),cfg)]); saveBlob(pdfBlob(b),'เกียรติบัตร_'+clean(r.name)+'.pdf'); }); toast('ดาวน์โหลดเกียรติบัตรแล้ว'); certMarkPub(); }
 async function certMerged(gi){ const g=CERT_G[gi], rows=certSel(g); if(!rows.length) return SW.err('ยังไม่ได้เลือกรายชื่อ');
   await busy(async()=>{ const cfg=await certPrep(rows); const b=await certPdf(rows.map(r=>certHtml(certRec(r),cfg)),i=>loaderText('กำลังสร้างเกียรติบัตร '+i+'/'+rows.length));
-    saveBlob(pdfBlob(b),'เกียรติบัตร_'+clean(g.school)+'_'+CERT.year+(CERT.term?'-'+CERT.term:'')+'.pdf'); }); loaderText(''); toast('ดาวน์โหลด PDF รวมเล่มแล้ว'); }
+    saveBlob(pdfBlob(b),'เกียรติบัตร_'+clean(g.school)+'_'+CERT.year+(CERT.term?'-'+CERT.term:'')+'.pdf'); }); loaderText(''); toast('ดาวน์โหลด PDF รวมเล่มแล้ว'); certMarkPub(); }
 async function certZipBuild(groups){ const all=groups.reduce((a,g)=>a.concat(certSel(g)),[]); if(!all.length) throw new Error('ยังไม่ได้เลือกรายชื่อ');
   if(!window.JSZip) await loadScript(JSZIP_URL);
   const cfg=await certPrep(all), zip=new JSZip(); let k=0;
@@ -2394,9 +2397,109 @@ async function certZipBuild(groups){ const all=groups.reduce((a,g)=>a.concat(cer
       let nm=clean(r.name)||r.id; if(used[nm]) nm+='_'+r.id; used[nm]=1; fo.file('เกียรติบัตร_'+nm+'.pdf',b); } }
   return zip.generateAsync({type:'blob'}); }
 async function certZip(gi){ const g=CERT_G[gi]; const blob=await busy(()=>certZipBuild([g])); loaderText('');
-  saveBlob(blob,'เกียรติบัตร_'+clean(g.school)+'_'+CERT.year+(CERT.term?'-'+CERT.term:'')+'.zip'); toast('ดาวน์โหลดไฟล์ ZIP แล้ว'); }
+  saveBlob(blob,'เกียรติบัตร_'+clean(g.school)+'_'+CERT.year+(CERT.term?'-'+CERT.term:'')+'.zip'); toast('ดาวน์โหลดไฟล์ ZIP แล้ว'); certMarkPub(); }
 async function certAllZip(){ const blob=await busy(()=>certZipBuild(CERT_G)); loaderText('');
-  saveBlob(blob,'เกียรติบัตร_ทุกโรงเรียน_'+CERT.year+(CERT.term?'-'+CERT.term:'')+'.zip'); toast('ดาวน์โหลดไฟล์ ZIP แล้ว'); }
+  saveBlob(blob,'เกียรติบัตร_ทุกโรงเรียน_'+CERT.year+(CERT.term?'-'+CERT.term:'')+'.zip'); toast('ดาวน์โหลดไฟล์ ZIP แล้ว'); certMarkPub(); }
+/* ---- เปิดให้ครูดาวน์โหลดเกียรติบัตรเอง: settings.cert_pub = [{year,term,w:{A,B,C},at}] (บันทึกอัตโนมัติเมื่อ ศน. สร้างเกียรติบัตร) ---- */
+const certPubList=()=>Array.isArray((Store.settings||{}).cert_pub)?Store.settings.cert_pub:[];
+const certPubOf=(y,t)=>certPubList().find(p=>String(p.year)===String(y||'')&&String(p.term||'')===String(t||''));
+async function certPubWrite(L,quiet){ const d={cert_pub:L}; if(quiet){ try{ await commit([{c:'Settings',op:'merge',id:'main',data:d}]); }catch(e){} } else await busy(()=>commit([{c:'Settings',op:'merge',id:'main',data:d}])); }
+async function certMarkPub(){ if(!CERT.year||certPubOf(CERT.year,CERT.term)) return; await certPubWrite(certPubList().concat([{year:CERT.year,term:CERT.term||'',w:{...AGW},at:new Date().toISOString()}]),true); if(cur==='certificate') render(); }
+async function certPubSet(on){ const L=certPubList().filter(p=>!(String(p.year)===String(CERT.year)&&String(p.term||'')===String(CERT.term||'')));
+  if(on) L.push({year:CERT.year,term:CERT.term||'',w:{...AGW},at:new Date().toISOString()});
+  await certPubWrite(L); SW.ok(on?'เปิดให้ครูดาวน์โหลดเกียรติบัตรแล้ว':'ปิดการดาวน์โหลดของครูแล้ว'); render(); }
+/* เกียรติบัตรของครูที่ล็อกอิน (เฉพาะชุดที่ ศน. เปิดแล้ว และผลถึงเกณฑ์) */
+function myCerts(){ const u=Store.user; if(!u||u.role!=='Teacher') return []; const out=[], keep={...AGW};
+  try{ certPubList().slice().sort((a,b)=>String(b.year).localeCompare(String(a.year))||String(b.term||'').localeCompare(String(a.term||''))).forEach(p=>{
+      if(p.w) Object.assign(AGW,p.w);
+      const r=certGroups({year:String(p.year),term:p.term||'',school:''}).reduce((a,g)=>a.concat(g.rows),[]).find(x=>x.id===u.username&&x.ok);
+      if(r) out.push({p,r}); }); }
+  finally{ Object.assign(AGW,keep); }
+  return out; }
+const certLbl=p=>p.term?'ภาคเรียนที่ '+p.term+'/'+p.year:'ปีการศึกษา '+p.year;
+async function myCertDl(i){ const c=myCerts()[i]; if(!c) return SW.err('ไม่พบเกียรติบัตร');
+  await busy(async()=>{ const cfg=await certPrep([c.r]); const b=await certPdf([certHtml({...certRec(c.r),year:String(c.p.year),term:c.p.term||''},cfg)]);
+    saveBlob(pdfBlob(b),'เกียรติบัตร_'+clean(c.r.name)+(myCerts().length>1?'_'+clean(certLbl(c.p)).replace(/\s+/g,''):'')+'.pdf'); }); toast('ดาวน์โหลดเกียรติบัตรแล้ว'); }
+VIEWS.mycert=()=>{ const C=myCerts();
+  if(!C.length) return `<div class="card glass reveal"><div class="empty">ยังไม่มีเกียรติบัตรของท่าน</div></div>`;
+  return `<div class="grid g2">${C.map((c,i)=>`<div class="card glass reveal" style="text-align:center"><div style="font-size:46px">🏅</div><h3 style="margin:6px 0">เกียรติบัตร ${esc(certLbl(c.p))}</h3>
+    <div class="muted">ผลการประเมินระดับ <b>${esc(c.r.grade)}</b> · คะแนนถ่วงน้ำหนัก ${c.r.w.toFixed(2)}</div>
+    <button class="btn pri" style="margin-top:14px" onclick="myCertDl(${i})">📥 ดาวน์โหลดเกียรติบัตร (PDF)</button></div>`).join('')}</div>`; };
+AFTER.mycert=()=>initReveal();
+
+/* ---- ครูได้รับการนิเทศครบ A·B·C ในภาคเรียนปัจจุบัน → หน้าต่างแจ้งเมื่อเข้าสู่ระบบ (ครั้งละ 1 ครั้งต่อการเปิดเว็บ) ---- */
+function tDoneInfo(){ const u=Store.user; if(!u||u.role!=='Teacher') return null; const y=String(Store.settings.academic_year), t=String(Store.settings.term);
+  const L=Object.values(Store.data.Evaluations||{}).filter(e=>e.teacher_id===u.username&&String(e.year)===y&&String(e.term)===t&&evalDone(e));
+  if(!['A','B','C'].every(x=>L.some(e=>e.type===x))) return null;
+  const last=L.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')))[0]; return {y,t,last,T:termEvals(last)}; }
+function doneModal(force){ const D=tDoneInfo(); if(!D) return false; const k='dm_'+D.y+'_'+D.t; if(!force&&ss.get(k)) return false; ss.set(k,'1');
+  const sv=svCfg(), svOn=sv.open&&!(Store.user.surveyed||{})[svRound()], av=avg(D.T.map(e=>+e.total_normalized||0));
+  const C=myCerts(), ci=C.findIndex(c=>String(c.p.year)===D.y&&(!c.p.term||String(c.p.term)===D.t)), pub=certPubList().some(p=>String(p.year)===D.y&&(!p.term||String(p.term)===D.t));
+  const opt3=ci>=0?`<button class="btn" style="justify-content:flex-start" onclick="myCertDl(${ci})">🏅 พิมพ์เกียรติบัตร (PDF)</button>`
+    :pub?'':`<button class="btn" style="justify-content:flex-start" disabled title="ศน. ยังไม่ได้ออกเกียรติบัตร">🏅 พิมพ์เกียรติบัตร <span class="muted" style="margin-left:6px;font-size:12.5px">(รอ ศน. ออกเกียรติบัตร)</span></button>`;
+  openModal(`<div style="text-align:center"><div style="font-size:52px;line-height:1.1">🎉</div><h2 style="margin:6px 0 4px">การนิเทศของท่านเสร็จสิ้นแล้ว</h2>
+    <div class="muted">ภาคเรียนที่ ${esc(D.t)}/${esc(D.y)} · ได้รับการนิเทศครบทั้ง ${D.T.length} แบบ</div></div>
+   <div class="row" style="justify-content:center;gap:8px;flex-wrap:wrap;margin:14px 0">${D.T.map(e=>`<span class="badge ${e.type==='A'?'':e.type==='B'?'y':'s'}">แบบ ${e.type} · ${(+e.total_normalized||0).toFixed(2)}</span>`).join('')}<span class="badge g">เฉลี่ย ${av.toFixed(2)} · ${esc(gradeOf(av))}</span></div>
+   <div style="display:grid;gap:10px">
+    ${svOn?`<button class="btn pri" style="justify-content:flex-start" onclick="closeModal();SV_SNOOZE=false;svPrompt()">💛 ประเมินความพึงพอใจต่อการนิเทศ</button>`:''}
+    <button class="btn" style="justify-content:flex-start" onclick="resultPdf('${D.last.eval_id}')">📄 พิมพ์เอกสารสรุปผลการประเมิน (PDF)</button>
+    ${opt3}</div>
+   <div style="text-align:right;margin-top:14px"><button class="btn ghost" onclick="closeModal()">ปิด</button></div>`,'520px');
+  return true; }
+
+/* ---- ผู้บริหาร: รายงานสรุปผลการนิเทศโรงเรียน ฉบับเต็ม (ปก · คำนำ · สารบัญ · เนื้อหา) ดาวน์โหลดเป็น PDF ---- */
+function schoolReportHtml(){ const si=Store.settings.school_info||{}, D=sdRows(SDF.year,SDF.term), R=D.rows, n=R.length, f=x=>x==null?'-':(+x).toFixed(2), pc=(a,b)=>b?(a/b*100).toFixed(2):'0.00';
+  const per=SDF.term?'ภาคเรียนที่ '+SDF.term+' ปีการศึกษา '+SDF.year:'ปีการศึกษา '+SDF.year, sc=D.sc||'โรงเรียน', today=thDate(new Date());
+  const seen=R.filter(r=>r.k>0).length, full=R.filter(r=>r.k===3).length, sAll=D.EV.map(e=>+e.total_normalized||0), sAvg=sAll.length?avg(sAll):null, W=R.filter(r=>r.w!=null);
+  const PB='<div style="page-break-before:always;break-before:page"></div>', H=(t)=>`<h2 style="font-size:19px;margin:0 0 10px;color:#9A3412;border-bottom:2px solid #FDBA74;padding-bottom:4px">${t}</h2>`;
+  const gs=((Store.settings||{}).grade_scale||[]).slice().sort((a,b)=>b.min-a.min);
+  /* ผลรายด้าน: เฉลี่ยตามชื่อหมวดของแต่ละแบบ */
+  const cat={}; D.EV.filter(evalDone).forEach(e=>{ const Rb=rubE(e), s=e.scores_json||e.scores||{}; Rb.cats.forEach((c,ci)=>{ const v=c.items.map((x,ii)=>+s[ci+'_'+ii]||0).filter(Boolean); if(!v.length) return;
+    const k=e.type+'|'+c.name; (cat[k]=cat[k]||{t:e.type,name:c.name,v:[]}).v.push(avg(v)/5*100); }); });
+  const CT=Object.values(cat).map(x=>({...x,a:avg(x.v)})).sort((a,b)=>a.t.localeCompare(b.t)||0);
+  const top=CT.slice().sort((a,b)=>b.a-a.a).slice(0,3), low=CT.slice().sort((a,b)=>a.a-b.a).slice(0,3);
+  const cm=D.EV.filter(e=>String(e.comment||'').trim()).sort((a,b)=>uname(a.teacher_id).localeCompare(uname(b.teacher_id),'th')||a.type.localeCompare(b.type));
+  const cover=`<div style="text-align:center;padding-top:70px"><img src="${esc(logoSrc(300))}" style="height:120px">
+    <div style="font-size:30px;font-weight:700;margin-top:60px;line-height:1.5">รายงานสรุปผลการนิเทศการศึกษา</div>
+    <div style="font-size:24px;font-weight:600;margin-top:18px">${esc(sc)}</div>
+    <div style="font-size:20px;margin-top:10px">${esc(per)}</div>
+    <div style="margin-top:200px;font-size:18px;line-height:1.7">${esc(si.name||'')}<br>${esc(si.affiliation||'')}</div></div>`;
+  const pre=`${PB}<div style="text-align:center;font-size:22px;font-weight:700;margin:10px 0 18px">คำนำ</div>
+    <p style="text-indent:2.5em;line-height:1.9;text-align:justify">รายงานสรุปผลการนิเทศการศึกษาฉบับนี้ จัดทำขึ้นเพื่อสรุปผลการนิเทศ ติดตาม และประเมินการจัดการเรียนรู้ของครูใน${esc(sc)} ${esc(per)} ซึ่งดำเนินการโดยศึกษานิเทศก์ ${esc(si.name||'')} ${esc(si.affiliation||'')} ผ่านการประเมิน ${['A','B','C'].map(t=>esc(rlabel(t))).join(' ')} โดยนำเสนอข้อมูลภาพรวมของโรงเรียน ความคืบหน้าการนิเทศ ผลการประเมินรายบุคคล ผลการประเมินรายด้าน และข้อเสนอแนะจากผู้นิเทศ</p>
+    <p style="text-indent:2.5em;line-height:1.9;text-align:justify">ผู้บริหารสถานศึกษาสามารถนำข้อมูลในรายงานนี้ไปใช้วางแผนพัฒนาครูและพัฒนาคุณภาพการจัดการเรียนรู้ของโรงเรียนต่อไป เช่น ส่งเสริมจุดเด่นที่ได้คะแนนสูงให้เป็นแบบอย่าง และจัดกิจกรรมพัฒนาในด้านที่ยังต้องปรับปรุง</p>
+    <p style="text-indent:2.5em;line-height:1.9">ขอขอบคุณผู้บริหาร คณะครู และบุคลากรของ${esc(sc)} ที่ให้ความร่วมมือในการนิเทศครั้งนี้เป็นอย่างดี</p>
+    <div style="text-align:right;margin-top:40px;line-height:1.8">${esc(si.name||'')}<br>${esc(today)}</div>
+    ${PB}<div style="text-align:center;font-size:22px;font-weight:700;margin:10px 0 18px">สารบัญ</div>
+    <table style="width:100%">${['ตอนที่ 1 ข้อมูลทั่วไปและภาพรวมการนิเทศ','ตอนที่ 2 ผลการประเมินรายบุคคล','ตอนที่ 3 ผลการประเมินรายด้าน','ตอนที่ 4 ข้อเสนอแนะจากผู้นิเทศ','ตอนที่ 5 สรุปและข้อเสนอแนะเพื่อการพัฒนา'].map(x=>`<tr><td style="border:none;padding:6px 0">${x}</td></tr>`).join('')}</table>`;
+  const p1=`${PB}${H('ตอนที่ 1 ข้อมูลทั่วไปและภาพรวมการนิเทศ')}
+    <table><tr><td style="width:55%">โรงเรียน</td><td>${esc(sc)}</td></tr><tr><td>ช่วงเวลา</td><td>${esc(per)}</td></tr><tr><td>จำนวนครู</td><td>${n} คน</td></tr>
+    <tr><td>ได้รับการนิเทศอย่างน้อย 1 แบบ</td><td>${seen} คน (ร้อยละ ${pc(seen,n)})</td></tr><tr><td>ได้รับการนิเทศครบ A·B·C</td><td>${full} คน (ร้อยละ ${pc(full,n)})</td></tr>
+    <tr><td>จำนวนครั้งที่นิเทศทั้งหมด</td><td>${D.EV.length} ครั้ง</td></tr><tr><td>แผนการจัดการเรียนรู้ที่ส่ง</td><td>${D.PL.length} แผน</td></tr>
+    <tr><td>คะแนนเฉลี่ยของโรงเรียน (เต็ม 100)</td><td><b>${f(sAvg)}</b> ${sAvg!=null?'('+esc(gradeOf(sAvg))+')':''}</td></tr></table>
+    <h3 style="font-size:16px;margin:16px 0 6px">ความคืบหน้าการนิเทศแยกตามแบบ</h3>
+    <table><tr><th>แบบประเมิน</th><th>จำนวนครูที่ได้รับการนิเทศ</th><th>ร้อยละ</th><th>คะแนนเฉลี่ย</th></tr>${['A','B','C'].map(t=>{ const c=R.filter(r=>r[t]).length, a=D.EV.filter(e=>e.type===t).map(e=>+e.total_normalized||0);
+      return `<tr><td>${esc(rlabel(t))}</td><td style="text-align:center">${c} / ${n}</td><td style="text-align:center">${pc(c,n)}</td><td style="text-align:center">${a.length?avg(a).toFixed(2):'-'}</td></tr>`; }).join('')}</table>
+    <h3 style="font-size:16px;margin:16px 0 6px">จำนวนครูจำแนกตามระดับคุณภาพ (คะแนนถ่วงน้ำหนัก)</h3>
+    <table><tr><th>ระดับคุณภาพ</th><th>เกณฑ์คะแนน</th><th>จำนวน (คน)</th><th>ร้อยละ</th></tr>${gs.map((g,i)=>{ const c=W.filter(r=>r.grade===g.label).length; return `<tr><td>${esc(g.label)}</td><td style="text-align:center">${g.min}${i?' – '+(gs[i-1].min-0.01).toFixed(2):' ขึ้นไป'}</td><td style="text-align:center">${c}</td><td style="text-align:center">${pc(c,W.length)}</td></tr>`; }).join('')}</table>`;
+  const p2=`${PB}${H('ตอนที่ 2 ผลการประเมินรายบุคคล')}<div style="font-size:13px;margin-bottom:6px">คะแนนถ่วงน้ำหนัก A ${AGW.A}% · B ${AGW.B}% · C ${AGW.C}% · ตัวเลขในวงเล็บคือจำนวนครั้งที่ได้รับการนิเทศ</div>
+    <table style="font-size:13px"><tr><th>ที่</th><th>ชื่อ-สกุล</th><th>กลุ่มสาระฯ</th><th>แบบ A</th><th>แบบ B</th><th>แบบ C</th><th>ถ่วงน้ำหนัก</th><th>ระดับ</th></tr>
+    ${R.map((r,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${esc(r.t.name)}</td><td>${esc(r.t.group||'-')}</td>${['A','B','C'].map(t=>`<td style="text-align:center">${r[t]?f(r['a'+t])+' ('+r[t]+')':'-'}</td>`).join('')}<td style="text-align:center"><b>${f(r.w)}</b></td><td style="text-align:center">${r.w==null?'-':esc(r.grade)}</td></tr>`).join('')||'<tr><td colspan="8" style="text-align:center">ไม่พบรายชื่อครู</td></tr>'}</table>`;
+  const p3=`${PB}${H('ตอนที่ 3 ผลการประเมินรายด้าน')}${CT.length?`<table style="font-size:13px"><tr><th style="width:60px">แบบ</th><th>ด้าน / หมวดการประเมิน</th><th style="width:90px">ร้อยละเฉลี่ย</th><th style="width:90px">ระดับ</th></tr>
+    ${CT.map(x=>`<tr><td style="text-align:center">${x.t}</td><td>${esc(x.name)}</td><td style="text-align:center">${x.a.toFixed(2)}</td><td style="text-align:center">${esc(gradeOf(x.a))}</td></tr>`).join('')}</table>`:'<p>ยังไม่มีผลการประเมินที่เสร็จสิ้นในช่วงนี้</p>'}`;
+  const p4=`${PB}${H('ตอนที่ 4 ข้อเสนอแนะจากผู้นิเทศ')}${cm.length?`<table style="font-size:13px"><tr><th style="width:160px">ครู</th><th style="width:44px">แบบ</th><th>ข้อเสนอแนะ</th></tr>${cm.map(e=>`<tr><td>${esc(uname(e.teacher_id))}</td><td style="text-align:center">${e.type}</td><td>${esc(e.comment)}</td></tr>`).join('')}</table>`:'<p>ไม่มีข้อเสนอแนะที่บันทึกไว้</p>'}`;
+  const li=a=>a.map(x=>`<li>${esc(rlabel(x.t))} · ${esc(x.name)} (ร้อยละ ${x.a.toFixed(2)})</li>`).join('');
+  const p5=`${PB}${H('ตอนที่ 5 สรุปและข้อเสนอแนะเพื่อการพัฒนา')}
+    <p style="text-indent:2.5em;line-height:1.9;text-align:justify">${esc(per)} ${esc(sc)} มีครูทั้งหมด ${n} คน ได้รับการนิเทศแล้ว ${seen} คน คิดเป็นร้อยละ ${pc(seen,n)} และได้รับการนิเทศครบทั้ง 3 แบบ ${full} คน คิดเป็นร้อยละ ${pc(full,n)} ${sAvg!=null?'คะแนนเฉลี่ยของโรงเรียนเท่ากับ '+f(sAvg)+' อยู่ในระดับ'+esc(gradeOf(sAvg)):'ยังไม่มีผลคะแนนในช่วงนี้'}</p>
+    ${top.length?`<p><b>จุดเด่น</b> (ด้านที่ได้คะแนนสูงสุด)</p><ul style="line-height:1.8">${li(top)}</ul>`:''}
+    ${low.length?`<p><b>ด้านที่ควรพัฒนา</b> (ด้านที่ได้คะแนนต่ำสุด)</p><ul style="line-height:1.8">${li(low)}</ul>`:''}
+    <p><b>ข้อเสนอแนะ</b></p><ol style="line-height:1.9"><li>ส่งเสริมให้ครูที่ยังไม่ได้รับการนิเทศหรือได้รับไม่ครบทุกแบบ ส่งแผนและจองวันรับการนิเทศให้ครบ</li><li>ใช้จุดเด่นของโรงเรียนเป็นแบบอย่าง และจัดชุมชนการเรียนรู้ทางวิชาชีพ (PLC) แลกเปลี่ยนวิธีสอนระหว่างครู</li><li>วางแผนพัฒนาครูในด้านที่ได้คะแนนต่ำสุด เช่น การอบรม การนิเทศภายใน และการติดตามผลอย่างต่อเนื่อง</li></ol>
+    ${CREDIT_P('margin-top:30px')}`;
+  const css=`body{font-family:'Sarabun','TH SarabunPSK',sans-serif;font-size:15px;color:#111}table{width:100%;border-collapse:collapse;margin:4px 0}td,th{border:1px solid #9ca3af;padding:5px 7px;vertical-align:top}th{background:#FED7AA;text-align:center}h2,h3{font-family:'Sarabun',sans-serif}`;
+  return `<html><head><meta charset="utf-8"><title>รายงานสรุปผลการนิเทศ</title><style>${css}</style></head><body>${cover}${pre}${p1}${p2}${p3}${p4}${p5}</body></html>`; }
+async function schoolReportPdf(){ if(!sdRows(SDF.year,SDF.term).rows.length) return SW.err('ไม่พบรายชื่อครูในโรงเรียน');
+  const b64=await busy(()=>htmlToPdfB64(schoolReportHtml()));
+  saveBlob(new Blob([b64ToBytes(b64)],{type:'application/pdf'}),clean('รายงานสรุปผลการนิเทศ_'+(Store.user.school||'')+'_'+(SDF.term?'ภาคเรียนที่ '+SDF.term+'-':'ปีการศึกษา ')+SDF.year)+'.pdf'); toast('ดาวน์โหลดรายงานแล้ว'); }
+
 /* ---- ตั้งค่า ---- */
 function certInit(){ const c=certCfg(); FORM.certbg=c.bg; FORM.certseal=c.seal; FORM.certsig1=c.s1.sig; FORM.certsig2=c.s2.sig; }
 function certRead(){ const g=id=>{ const e=document.getElementById(id); return e?e.value:''; };
@@ -2689,7 +2792,7 @@ VIEWS.schooldash=()=>{ if(!SDF.init){ SDF.year=String(Store.settings.academic_ye
   const cell=(c,a)=>c?`${c} <span class="muted">(${f(a)})</span>`:'<span class="muted">-</span>';
   return `<div class="card glass reveal row" style="flex-wrap:wrap;gap:10px"><div><b style="font-size:17px">🏫 ${esc(D.sc||'โรงเรียน')}</b><div class="muted" style="font-size:13px">ข้อมูลและความคืบหน้าการนิเทศของโรงเรียนท่าน (ดูอย่างเดียว)</div></div><span class="sp"></span>
      <select style="width:auto" onchange="SDF.year=this.value;render()">${opt(yrs.map(y=>[y,'ปีการศึกษา '+y]),SDF.year)}</select>
-     <select style="width:auto" onchange="SDF.term=this.value;render()">${opt([['','ทั้งปี'],['1','ภาคเรียนที่ 1'],['2','ภาคเรียนที่ 2']],SDF.term)}</select><button class="btn sm" onclick="refreshData()">🔄 รีเฟรช</button></div>
+     <select style="width:auto" onchange="SDF.term=this.value;render()">${opt([['','ทั้งปี'],['1','ภาคเรียนที่ 1'],['2','ภาคเรียนที่ 2']],SDF.term)}</select><button class="btn sm" onclick="refreshData()">🔄 รีเฟรช</button><button class="btn sm pri" onclick="schoolReportPdf()">📥 รายงานสรุปผลการนิเทศ (PDF)</button></div>
    <div class="grid g5" style="margin-bottom:18px">${M.map(m=>`<div class="metric glass reveal"><div class="mi">${m[0]}</div><b style="font-size:${String(m[2]).length>7?'24px':'30px'}">${esc(m[2])}</b><small>${m[1]} ${m[3]}</small></div>`).join('')}</div>
    <div class="grid g2"><div class="card glass reveal"><h3>ความคืบหน้าการนิเทศ</h3>${bar('ได้รับการนิเทศอย่างน้อย 1 แบบ',seen)}${bar(rlabel('A'),R.filter(r=>r.A).length)}${bar(rlabel('B'),R.filter(r=>r.B).length)}${bar(rlabel('C'),R.filter(r=>r.C).length)}</div>
     <div class="card glass reveal"><h3>นัดนิเทศที่จะถึง</h3>${BK.length?BK.map(b=>`<div class="qi">📅 <b>${thDate(b.date)}</b> คาบ ${esc(b.period_no)} · ${esc(uname(b.teacher_id))}${b.note?` <span class="muted">· ${esc(b.note)}</span>`:''}</div>`).join(''):'<div class="empty">ยังไม่มีนัดนิเทศ</div>'}</div></div>
@@ -3140,8 +3243,8 @@ async function enter(r, fresh){
   Store.user=r.user;
   let pt = Store.portal || ss.get('portal');
   if(!pt || !PORTALS[pt] || !PORTALS[pt].roles.includes(r.user.role)) pt = ROLE_PORTAL[r.user.role] || 'teacher';
-  Store.portal=pt; ss.set('portal',pt); Store.settings=r.data.settings||Store.settings; ['Users','Evaluations','LessonPlans','Bookings','Schools','Surveys'].forEach(k=>Store.data[k]=r.data[k]||{});
-  applyTheme(Store.settings.theme); await FS.init(); shell(); go(ss.get('view')||(r.user.role==='User'?'schooldash':'dashboard')); loader(false); maybeTour();
+  Store.portal=pt; ss.set('portal',pt); Store.settings=r.data.settings||Store.settings; ['Users','Evaluations','LessonPlans','Bookings','Schools','Surveys','Works'].forEach(k=>Store.data[k]=r.data[k]||{});
+  applyTheme(Store.settings.theme); await FS.init(); shell(); go(ss.get('view')||(r.user.role==='User'?'schooldash':'dashboard')); loader(false); if(!doneModal()) maybeTour();
   if(r.warn&&r.warn.msg) setTimeout(()=>SW.err('⚠️ ระบบไม่ได้ทำงานในนามเจ้าของ',r.warn.msg),600);
 }
 async function logout(silent){
