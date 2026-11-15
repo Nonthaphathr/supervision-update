@@ -411,6 +411,9 @@ function saveTok(t){ ls.set('tok',t); ls.set('tok_t',String(Date.now())); }
 function getTok(){ const t=ls.get('tok'), at=+ls.get('tok_t')||0; if(t && Date.now()-at<SESSION_MS) return t; ls.del('tok'); ls.del('tok_t'); return null; }
 const Store = { user:null, token:'', data:{Users:{},Evaluations:{},LessonPlans:{},Bookings:{}}, settings:(window.APP_BOOT&&APP_BOOT.settings)||null };
 const TH_M = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const thDT = d=>{ if(!d) return '-'; const x=new Date(d); if(isNaN(x)) return d; return thDate(x)+' เวลา '+String(x.getHours()).padStart(2,'0')+'.'+String(x.getMinutes()).padStart(2,'0')+' น.'; };
+/* ข้อความเล็กใต้สถานะ: ส่งกลับให้ประเมินใหม่ / ครูแก้ไขหลังส่งกลับ */
+const retNote = x=>!x||!x.returned_at?'':(x.edited_at&&x.edited_at>x.returned_at?`<div style="font-size:11.5px;color:#15803D;margin-top:3px;white-space:nowrap">✏️ แก้ไขเมื่อ ${thDT(x.edited_at)}</div>`:`<div style="font-size:11.5px;color:#B45309;margin-top:3px;white-space:nowrap">↩️ ยกเลิกและส่งกลับเมื่อ ${thDT(x.returned_at)}</div>`);
 const thDate = d=>{ if(!d) return '-'; const x = new Date(d); if(isNaN(x)) return d; return x.getDate()+' '+TH_M[x.getMonth()]+' '+(x.getFullYear()+543); };
 const ymd = d=>{ const x=new Date(d); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); };
 const uid = p=>(p||'')+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
@@ -427,8 +430,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.31';
+const APP_VERSION = '1.3.32';
 const APP_CHANGELOG = [
+  {v:'1.3.32', d:'15 พ.ย. 2569', n:['ยกเลิกผลการประเมินได้ 2 แบบ: ส่งกลับไปรอประเมิน (แผน/ผลงานกลับไปให้ประเมินใหม่) หรือ ลบรายการออกจากระบบ','รายการที่ถูกส่งกลับ แสดง “ยกเลิกและส่งกลับเมื่อ…” และเมื่อครูแก้ไข/อัปไฟล์ใหม่ แสดง “แก้ไขเมื่อ…” สีเขียว']},
   {v:'1.3.31', d:'15 พ.ย. 2569', n:['ประวัติการประเมิน: ศน./แอดมินระบบ ติ๊กเลือกแล้วลบผลการประเมินทีละหลายรายการได้','ครูกด “ยกเลิก” ผลการประเมินพร้อมระบุเหตุผล ส่งไปที่เมนู “ครูแจ้งยกเลิก” ของ ศน./แอดมินระบบ','ตารางประวัติของครู แสดงเอกสารเฉพาะแบบประเมินที่ให้แนบเอกสาร/รูป']},
   {v:'1.3.30', d:'14 พ.ย. 2569', n:['ศน.: เมนู “คัดลอกข้อความแจ้งผู้บริหาร” ขึ้นเมื่อมีโรงเรียนนิเทศครบถ้วน พร้อมลิงก์รายงานสรุปผลฉบับสมบูรณ์ของโรงเรียน','เพิ่มคู่มือผู้บริหาร และปรับปรุงคู่มือ ศน.']},
   {v:'1.3.29', d:'14 พ.ย. 2569', n:['หน้า “ส่งผลงาน…” ของครู: ไม่ถามรายวิชาและชั้นเป็นค่าเริ่มต้น ศน. ติ๊กให้ถามได้ในตั้งค่าข้อกระทง']},
@@ -1010,7 +1014,7 @@ function planWaitCard(ids){
   return `<div class="card glass reveal"><h3>แผนที่รอประเมิน <span class="badge">${wait.length}</span></h3><div class="tw"><table>
    <thead><tr><th>วันที่ส่ง</th><th>ครู</th><th>วิชา / เรื่อง</th><th>ภาค/ปี</th><th>สถานะ</th><th>เอกสาร</th><th></th></tr></thead><tbody>
    ${wait.length?wait.map(p=>`<tr><td>${thDate(p.created_at)}</td><td>${esc(uname(p.teacher_id))}</td><td><b>${esc(p.subject)}</b><div class="muted">${esc(p.title)}</div></td>
-     <td>${esc(p.term)}/${esc(p.year)}</td><td><span class="badge ${p.status==='รอประเมิน'?'':'y'}">${esc(p.status)}</span></td>
+     <td>${esc(p.term)}/${esc(p.year)}</td><td><span class="badge ${p.status==='รอประเมิน'?'':'y'}">${esc(p.status)}</span>${retNote(p)}</td>
      <td class="row">${tfDocBtns(p,ids)}</td>
      <td><button class="btn sm pri" onclick="pullPlan('${p.plan_id}')">ดึงเข้าฟอร์ม →</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">ไม่มีแผนรอประเมิน</td></tr>'}
    </tbody></table></div></div>`; }
@@ -1060,7 +1064,7 @@ function workView(T){
     <div class="row" style="margin-top:14px"><span class="sp"></span>${WK_EDIT?'<button class="btn" onclick="WK_EDIT=null;workClear(\''+T+'\');render()">ยกเลิกแก้ไข</button>':''}<button class="btn pri" onclick="saveWork('${T}')">💾 ${WK_EDIT?'บันทึกการแก้ไข':'บันทึกส่งผลงาน'}</button></div></div>
    <div class="card glass reveal"><h3>ผลงานที่ส่งแล้ว</h3><div class="tw"><table><thead><tr><th>วันที่</th><th>วิชา / ชั้น</th><th>ไฟล์</th><th>สถานะ</th><th>คะแนน</th><th></th></tr></thead><tbody>
     ${mine.length?mine.map(x=>`<tr><td>${thDate(x.created_at)}</td><td><b>${esc(x.subject||'-')}</b><div class="muted">${esc(x.grade_level||'')}</div></td><td>${workChips(x)}</td>
-     <td><span class="badge ${x.status==='ประเมินแล้ว'?'g':''}">${esc(x.status)}</span></td><td>${x.score!=null?(+x.score).toFixed(2):'-'}</td>
+     <td><span class="badge ${x.status==='ประเมินแล้ว'?'g':''}">${esc(x.status)}</span>${retNote(x)}</td><td>${x.score!=null?(+x.score).toFixed(2):'-'}</td>
      <td class="row">${x.status==='รอประเมิน'?`<button class="btn sm" onclick="editWork('${x.work_id}')">✏️ แก้ไข</button><button class="btn sm del" onclick="delWork('${x.work_id}')">🗑</button>`:''}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">ยังไม่มีผลงานที่ส่ง</td></tr>'}
    </tbody></table></div></div>`; }
 function workClear(T){ workKeys(T).forEach(k=>{ FORM[k]=''; }); }
@@ -1072,12 +1076,12 @@ async function saveWork(T){ const o0=ropts(T), o={photos:wkP(o0),files:wkF(o0)},
   const photos=Array.from({length:o.photos},(_,i)=>FORM['w_photo'+(i+1)]||''), files=Array.from({length:o.files},(_,i)=>FORM['w_file'+(i+1)]||'');
   if(![...photos,...files].some(Boolean)) return SW.err('กรุณาอัปโหลดรูปหรือไฟล์อย่างน้อย 1 รายการ');
   const d={work_id:id, type:T, rubric_name:rub(T).name, teacher_id:u.username, school:u.school||'', group:val('w_group'), subject:val('w_subject'), grade_level:val('w_level'), rank:val('w_rank'),
-    term:val('w_term'), year:val('w_year'), note:val('w_note'), photos, files, status:'รอประเมิน', created_at:(WK_EDIT&&WK_EDIT.created_at)||new Date().toISOString()};
+    term:val('w_term'), year:val('w_year'), note:val('w_note'), photos, files, status:'รอประเมิน', created_at:(WK_EDIT&&WK_EDIT.created_at)||new Date().toISOString(), returned_at:(WK_EDIT&&WK_EDIT.returned_at)||'', edited_at:WK_EDIT?new Date().toISOString():''};
   await busy(()=>commit([{c:'Works',op:'set',id,data:d}])); WK_EDIT=null; workClear(T); SW.ok('ส่งผลงานเรียบร้อย','รอ ศน. ประเมิน'); render(); }
 function workWaitCard(T){ const L=Object.values(Store.data.Works||{}).filter(x=>x.type===T&&x.status!=='ประเมินแล้ว').sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
   return `<div class="card glass reveal"><h3>ผลงานที่ครูส่งมารอประเมิน <span class="badge">${L.length}</span></h3><div class="tw"><table>
    <thead><tr><th>วันที่ส่ง</th><th>ครู</th><th>วิชา / ชั้น</th><th>ภาค/ปี</th><th>ไฟล์</th><th></th></tr></thead><tbody>
-   ${L.length?L.map(x=>`<tr><td>${thDate(x.created_at)}</td><td>${esc(uname(x.teacher_id))}</td><td><b>${esc(x.subject||'-')}</b><div class="muted">${esc(x.grade_level||'')}</div></td><td>${esc(x.term)}/${esc(x.year)}</td><td>${workChips(x)}</td>
+   ${L.length?L.map(x=>`<tr><td>${thDate(x.created_at)}${retNote(x)}</td><td>${esc(uname(x.teacher_id))}</td><td><b>${esc(x.subject||'-')}</b><div class="muted">${esc(x.grade_level||'')}</div></td><td>${esc(x.term)}/${esc(x.year)}</td><td>${workChips(x)}</td>
      <td><button class="btn sm pri" onclick="pullWork('${x.work_id}')">ดึงเข้าฟอร์ม →</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">ยังไม่มีผลงานที่ครูส่งมา</td></tr>'}
    </tbody></table></div></div>`; }
 function pullWork(id){ const w=(Store.data.Works||{})[id]; if(!w) return; const t=Store.data.Users[w.teacher_id]||{};
@@ -1108,7 +1112,7 @@ VIEWS.submitPlan = ()=>{
     <div class="row" style="margin-top:14px"><span class="sp"></span>${PLAN_EDIT?'<button class="btn" onclick="PLAN_EDIT=null;render()">ยกเลิกแก้ไข</button>':''}<button class="btn pri" onclick="savePlan()">📤 ${PLAN_EDIT?'บันทึกการแก้ไข':'ส่งแผนการจัดการเรียนรู้'}</button></div></div>
    <div class="card glass reveal"><h3>แผนที่ส่งแล้ว</h3><div class="tw"><table><thead><tr><th>วันที่</th>${u.role==='Admin'?'<th>ครู</th>':''}<th>วิชา / เรื่อง</th><th>สถานะ</th><th>คะแนน</th><th></th></tr></thead><tbody>
     ${mine.length?mine.map(x=>`<tr><td>${thDate(x.created_at)}</td>${u.role==='Admin'?`<td>${esc(uname(x.teacher_id))}</td>`:''}<td><b>${esc(x.subject)}</b><div class="muted">${esc(x.title)}</div></td>
-     <td><span class="badge ${x.status==='ประเมินแล้ว'?'g':''}">${esc(x.status)}</span></td><td>${x.score!=null?(+x.score).toFixed(2):'-'}</td>
+     <td><span class="badge ${x.status==='ประเมินแล้ว'?'g':''}">${esc(x.status)}</span>${retNote(x)}</td><td>${x.score!=null?(+x.score).toFixed(2):'-'}</td>
      <td class="row"><button class="btn sm" ${x.pdf_plan_url?'':'disabled'} onclick="viewPdf('${esc(x.pdf_plan_url)}','แผน')">📄 ดูแผน</button>${x.status==='รอประเมิน'?`<button class="btn sm" onclick="editPlan('${x.plan_id}')">✏️</button><button class="btn sm del" onclick="delPlan('${x.plan_id}')">🗑</button>`:''}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">ยังไม่มีแผนที่ส่ง</td></tr>'}
    </tbody></table></div></div>`;
 };
@@ -1124,7 +1128,7 @@ async function savePlan(){
   Object.keys(TFV.tfnames).forEach(k=>{ if(!TFV.tfiles[k]) delete TFV.tfnames[k]; });
   const d={ plan_id:id, teacher_id:(PLAN_EDIT&&PLAN_EDIT.teacher_id)||Store.user.username, group:val('p_group'), subject:val('p_subject'), grade_level:val('p_level'), unit:val('p_unit'), title:val('p_title'),
     term:val('p_term'), year:val('p_year'), pdf_plan_url:TFV.pdf_plan_url, post_note_url:TFV.post_note_url, tfiles:TFV.tfiles, tfnames:TFV.tfnames, rank:val('p_rank'), result:val('p_result'), problem:val('p_problem'), solution:val('p_solution'),
-    status:'รอประเมิน', created_at:(PLAN_EDIT&&PLAN_EDIT.created_at)||new Date().toISOString() };
+    status:'รอประเมิน', created_at:(PLAN_EDIT&&PLAN_EDIT.created_at)||new Date().toISOString(), returned_at:(PLAN_EDIT&&PLAN_EDIT.returned_at)||'', edited_at:PLAN_EDIT?new Date().toISOString():'' };
   if(!d.subject||!d.title) return SW.err('กรุณากรอกรายวิชาและชื่อแผน');
   if(TFV.planOn&&!d.pdf_plan_url) return SW.err('กรุณาแนบไฟล์แผน PDF');
   await busy(()=>commit([{c:'LessonPlans',op:'set',id,data:d}])); PLAN_EDIT=null; SW.ok('ส่งแผนเรียบร้อย','รอผู้นิเทศประเมิน'); render(); updateNoti(); setTimeout(svPrompt,2000);
@@ -1397,14 +1401,14 @@ VIEWS.history = ()=>{
     <select onchange="HF.year=this.value;render()">${opt([['','ทุกปีการศึกษา'],...years],HF.year)}</select>
     <select onchange="HF.term=this.value;render()">${opt([['','ทุกภาคเรียน'],['1','ภาคเรียนที่ 1'],['2','ภาคเรียนที่ 2']],HF.term)}</select>
     <select onchange="HF.type=this.value;render()">${opt([['','ทุกแบบประเมิน'],['A',rlabel('A')],['B',rlabel('B')],['C',rlabel('C')]],HF.type)}</select></div>
-    ${['Admin','Supervisor'].includes(Store.user.role)&&!isSelfView()?`<div class="row" style="margin-top:10px;gap:8px"><span class="muted" style="font-size:13px">ติ๊กเลือกรายการในตาราง แล้วกดลบได้ทีละหลายรายการ (เช่น ผลที่ทดสอบระบบ หรือผลที่บันทึกซ้ำ)</span><span class="sp"></span><button class="btn sm del" ${hSelN()?'':'disabled'} onclick="delEvals()">🗑 ลบที่เลือก (${hSelN()})</button>${hSelN()?'<button class="btn sm" onclick="HSEL={};render()">ล้างการเลือก</button>':''}</div>`:''}</div>
+    ${['Admin','Supervisor'].includes(Store.user.role)&&!isSelfView()?`<div class="row" style="margin-top:10px;gap:8px"><span class="muted" style="font-size:13px">ติ๊กเลือกรายการแล้วกดยกเลิกได้ทีละหลายรายการ เลือกได้ว่าจะส่งกลับไปรอประเมิน หรือลบออกจากระบบ (เช่น ผลที่ทดสอบ หรือบันทึกซ้ำ)</span><span class="sp"></span><button class="btn sm del" ${hSelN()?'':'disabled'} onclick="delEvals()">🗑 ยกเลิกที่เลือก (${hSelN()})</button>${hSelN()?'<button class="btn sm" onclick="HSEL={};render()">ล้างการเลือก</button>':''}</div>`:''}</div>
    <div class="card glass reveal"><h3>ผลการประเมิน <span class="badge">${E.length}</span></h3>${evalTable(E,true)}</div>`;
 };
 AFTER.history = ()=>initReveal();
-async function delEval(id){ if(!(await SW.confirm('ลบผลการประเมินนี้?','ไม่สามารถกู้คืนได้'))) return;
-  const e=Store.data.Evaluations[id], ops=[{c:'Evaluations',op:'delete',id}];
-  ops.push(...evRevertOps(e));
-  await busy(()=>commit(ops)); delete HSEL[id]; render(); updateNoti(); }
+async function delEval(id){ const e=Store.data.Evaluations[id]; if(!e) return; const mode=await evCancelMode(1,!!(e.plan_id||e.work_id)); if(!mode) return;
+  const ops=[{c:'Evaluations',op:'delete',id}];
+  ops.push(...evRevertOps(e,mode));
+  await busy(()=>commit(ops)); delete HSEL[id]; SW.ok(mode==='purge'?'ลบรายการออกจากระบบแล้ว':'ส่งกลับไปรอประเมินแล้ว'); shell(); go(allowed(cur)?cur:'history'); updateNoti(); }
 
 /* ---------- Aggregate ---------- */
 let AGW={A:40,B:30,C:30}, AGF={year:'',term:''};
@@ -2562,15 +2566,22 @@ const hSelN=()=>Object.keys(HSEL).filter(k=>HSEL[k]&&(Store.data.Evaluations||{}
 function hSel(id,on){ if(on) HSEL[id]=1; else delete HSEL[id]; render(); }
 function hSelAll(on){ const rows=[...document.querySelectorAll('#view tbody input[type=checkbox]')]; rows.forEach(c=>{ const m=(c.getAttribute('onchange')||'').match(/hSel\('([^']+)'/); if(m){ if(on) HSEL[m[1]]=1; else delete HSEL[m[1]]; } }); render(); }
 /* เมื่อลบผลประเมิน: แผน/ผลงานที่ผูกไว้กลับเป็น “รอประเมิน” */
-function evRevertOps(e){ const ops=[];
-  if(e.plan_id && (Store.data.LessonPlans||{})[e.plan_id]) ops.push({c:'LessonPlans',op:'merge',id:e.plan_id,data:{status:'รอประเมิน',eval_id:'',score:null}});
-  if(e.work_id && (Store.data.Works||{})[e.work_id]) ops.push({c:'Works',op:'merge',id:e.work_id,data:{status:'รอประเมิน',eval_id:'',score:null}});
+function evRevertOps(e,mode){ const ops=[], now=new Date().toISOString();
+  [['LessonPlans',e.plan_id],['Works',e.work_id]].forEach(([c,id])=>{ if(!id||!(Store.data[c]||{})[id]) return;
+    ops.push(mode==='purge'?{c,op:'delete',id}:{c,op:'merge',id,data:{status:'รอประเมิน',eval_id:'',score:null,returned_at:now,edited_at:''}}); });
   return ops; }
+/* ถามวิธียกเลิก: return = ส่งกลับไปรอประเมิน · purge = ลบรายการออกจากระบบ */
+async function evCancelMode(n,linked){ const t=n>1?'ยกเลิกผลการประเมิน '+n+' รายการ':'ยกเลิกผลการประเมินนี้';
+  if(!window.Swal) return confirm(t+'?')?'return':null;
+  const r=await Swal.fire({icon:'warning',title:t,width:560,
+    html:`<div style="text-align:left;font-size:14px;line-height:1.7"><b>↩️ ส่งกลับไปรอประเมิน</b> — ลบผลคะแนน แล้ว${linked?'แผน/ผลงานที่ครูส่งกลับไปอยู่ในรายการ “รอประเมิน” ให้ประเมินใหม่ (ครูแก้ไขหรืออัปไฟล์ใหม่ได้)':'ครูถูกนับว่ายังไม่ได้รับการประเมินแบบนี้'}<br><b style="color:#B91C1C">🗑 ลบรายการออกจากระบบ</b> — ลบผลคะแนน${linked?' และลบแผน/ผลงานที่ผูกไว้ออก':''}ทั้งหมด ใช้กับข้อมูลทดสอบหรือที่ส่งซ้ำ<br><span style="color:#6b7280">ทั้งสองแบบกู้คืนผลคะแนนไม่ได้</span></div>`,
+    showDenyButton:true,showCancelButton:true,confirmButtonText:'↩️ ส่งกลับไปรอประเมิน',denyButtonText:'🗑 ลบออกจากระบบ',cancelButtonText:'ปิด',confirmButtonColor:getCss('--p'),denyButtonColor:'#DC2626'});
+  return r.isConfirmed?'return':r.isDenied?'purge':null; }
 async function delEvals(){ const ids=Object.keys(HSEL).filter(k=>HSEL[k]&&(Store.data.Evaluations||{})[k]); if(!ids.length) return;
-  if(!(await SW.confirm('ลบผลการประเมิน '+ids.length+' รายการ?','ไม่สามารถกู้คืนได้ · แผน/ผลงานที่ผูกไว้จะกลับเป็น “รอประเมิน”'))) return;
-  const ops=[]; ids.forEach(id=>{ const e=Store.data.Evaluations[id]; ops.push({c:'Evaluations',op:'delete',id},...evRevertOps(e)); });
+  const mode=await evCancelMode(ids.length,ids.some(id=>{ const e=Store.data.Evaluations[id]; return e.plan_id||e.work_id; })); if(!mode) return;
+  const ops=[]; ids.forEach(id=>{ const e=Store.data.Evaluations[id]; ops.push({c:'Evaluations',op:'delete',id},...evRevertOps(e,mode)); });
   for(let i=0;i<ops.length;i+=150){ const part=ops.slice(i,i+150); await busy(()=>commit(part)); }
-  HSEL={}; SW.ok('ลบแล้ว '+ids.length+' รายการ'); shell(); go(cur); updateNoti(); }
+  HSEL={}; SW.ok((mode==='purge'?'ลบออกจากระบบแล้ว ':'ส่งกลับไปรอประเมินแล้ว ')+ids.length+' รายการ'); shell(); go(cur); updateNoti(); }
 /* เอกสารในแถว: แสดงเฉพาะแบบที่ตั้งให้แนบแผน/รูป/ไฟล์ (ใช้ตัวเลือกที่เก็บไว้กับผลประเมินนั้น) */
 function evDocs(e){ const o=(e.rubric&&e.rubric.cats)?roptsOf(e.rubric,e.type):ropts(e.type), hasAtt=(e.photos||[]).some(Boolean)||(e.files||[]).some(Boolean);
   const plan=(o.plan||e.plan_id)?teacherDocs(planOf(e.teacher_id,e.term,e.year,e.plan_id),false,undefined,o.docsOff):'';
@@ -2590,11 +2601,11 @@ async function cxAsk(id){ const e=Store.data.Evaluations[id]; if(!e) return;
   const res=await busy(()=>MODE==='gas'?gasCall('apiCancelRequest',Store.token,id,String(r.value).trim()):Promise.resolve({cancel:{status:'requested',reason:String(r.value).trim(),at:new Date().toISOString(),by:Store.user.username}}));
   e.cancel=res.cancel; SW.ok('แจ้งยกเลิกแล้ว','รอ ศน. หรือแอดมินระบบดำเนินการ'); render(); }
 VIEWS.cancelreq=()=>{ const L=cxList();
-  return `<div class="card glass reveal"><div class="muted" style="font-size:13.5px;line-height:1.7">ผลการประเมินที่ครูแจ้งขอยกเลิก · ตรวจเหตุผลแล้วเลือก <b>ลบผลประเมิน</b> (แผน/ผลงานที่ผูกไว้กลับเป็นรอประเมิน) หรือ <b>ไม่อนุมัติ</b> (ผลคงเดิม ครูเห็นสถานะ “ไม่อนุมัติยกเลิก”)</div></div>
+  return `<div class="card glass reveal"><div class="muted" style="font-size:13.5px;line-height:1.7">ผลการประเมินที่ครูแจ้งขอยกเลิก · ตรวจเหตุผลแล้วกด <b>ยกเลิกผลประเมิน…</b> (เลือกส่งกลับไปรอประเมิน หรือลบออกจากระบบ) หรือ <b>ไม่อนุมัติ</b> (ผลคงเดิม ครูเห็นสถานะ “ไม่อนุมัติยกเลิก”)</div></div>
    <div class="card glass reveal"><div class="tw"><table><thead><tr><th>วันที่แจ้ง</th><th>ครู</th><th>แบบ</th><th>วันที่นิเทศ</th><th>คะแนน</th><th>ผู้นิเทศ</th><th>เหตุผล</th><th></th></tr></thead><tbody>
    ${L.map(e=>`<tr><td>${thDate(e.cancel.at)}</td><td><b>${esc(uname(e.teacher_id))}</b><div class="muted">${esc(schOf(e))}</div></td><td><span class="badge ${e.type==='A'?'':e.type==='B'?'y':'s'}">${e.type}</span></td><td>${thDate(e.date)}</td><td>${(+e.total_normalized||0).toFixed(2)}</td>
      <td style="font-size:12px">${(e.evaluators||[]).map(uname).map(esc).join('<br>')}</td><td style="max-width:280px">${esc(e.cancel.reason||'')}</td>
-     <td class="row"><button class="btn sm" onclick="printEval(Store.data.Evaluations['${e.eval_id}'])">ดูผล</button><button class="btn sm del" onclick="delEval('${e.eval_id}')">🗑 ลบผลประเมิน</button><button class="btn sm" onclick="cxReject('${e.eval_id}')">ไม่อนุมัติ</button></td></tr>`).join('')||'<tr><td colspan="8" class="empty">ไม่มีรายการที่ครูแจ้งยกเลิก</td></tr>'}</tbody></table></div></div>`; };
+     <td class="row"><button class="btn sm" onclick="printEval(Store.data.Evaluations['${e.eval_id}'])">ดูผล</button><button class="btn sm del" onclick="delEval('${e.eval_id}')">ยกเลิกผลประเมิน…</button><button class="btn sm" onclick="cxReject('${e.eval_id}')">ไม่อนุมัติ</button></td></tr>`).join('')||'<tr><td colspan="8" class="empty">ไม่มีรายการที่ครูแจ้งยกเลิก</td></tr>'}</tbody></table></div></div>`; };
 AFTER.cancelreq=()=>initReveal();
 async function cxReject(id){ const e=Store.data.Evaluations[id]; if(!e) return;
   const r=window.Swal?await Swal.fire({title:'ไม่อนุมัติการยกเลิก',input:'text',inputPlaceholder:'แจ้งเหตุผลให้ครู (ไม่บังคับ)',showCancelButton:true,confirmButtonText:'ยืนยัน',cancelButtonText:'ปิด',confirmButtonColor:getCss('--p')}):{isConfirmed:true,value:''};
