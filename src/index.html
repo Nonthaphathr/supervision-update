@@ -427,8 +427,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.30';
+const APP_VERSION = '1.3.31';
 const APP_CHANGELOG = [
+  {v:'1.3.31', d:'15 พ.ย. 2569', n:['ประวัติการประเมิน: ศน./แอดมินระบบ ติ๊กเลือกแล้วลบผลการประเมินทีละหลายรายการได้','ครูกด “ยกเลิก” ผลการประเมินพร้อมระบุเหตุผล ส่งไปที่เมนู “ครูแจ้งยกเลิก” ของ ศน./แอดมินระบบ','ตารางประวัติของครู แสดงเอกสารเฉพาะแบบประเมินที่ให้แนบเอกสาร/รูป']},
   {v:'1.3.30', d:'14 พ.ย. 2569', n:['ศน.: เมนู “คัดลอกข้อความแจ้งผู้บริหาร” ขึ้นเมื่อมีโรงเรียนนิเทศครบถ้วน พร้อมลิงก์รายงานสรุปผลฉบับสมบูรณ์ของโรงเรียน','เพิ่มคู่มือผู้บริหาร และปรับปรุงคู่มือ ศน.']},
   {v:'1.3.29', d:'14 พ.ย. 2569', n:['หน้า “ส่งผลงาน…” ของครู: ไม่ถามรายวิชาและชั้นเป็นค่าเริ่มต้น ศน. ติ๊กให้ถามได้ในตั้งค่าข้อกระทง']},
   {v:'1.3.28', d:'14 พ.ย. 2569', n:['ข้อกระทงการนิเทศ: เลือกคนอัปโหลดแยกกันระหว่างรูปภาพกับไฟล์ PDF (เช่น ครูอัปไฟล์ ศน. อัปภาพ)']},
@@ -585,6 +586,7 @@ const NAV = [
   {id:'signature', t:'ลายเซ็นดิจิทัล', d:'วาดหรืออัปโหลดลายเซ็นสำหรับรายงาน PDF', ic:'sig', roles:['Supervisor'], p:['supervisor']},
   {id:'certificate', t:'ออกเกียรติบัตร', d:'ออกเกียรติบัตรตามระดับผลการประเมิน ดาวน์โหลด PDF รายคนหรือทั้งโรงเรียน', ic:'cert', roles:['Admin','Supervisor'], p:['supervisor','admin']},
   {id:'notifyexec', t:'คัดลอกข้อความแจ้งผู้บริหาร', d:'โรงเรียนที่นิเทศเสร็จสิ้นครบถ้วน · คัดลอกข้อความแจ้ง ผอ. พร้อมลิงก์รายงานฉบับสมบูรณ์', ic:'bell', roles:['Admin','Supervisor'], p:['supervisor','admin'], cond:()=>nxDone().length>0},
+  {id:'cancelreq', get t(){ return 'ครูแจ้งยกเลิก ('+cxList().length+')'; }, d:'ผลการประเมินที่ครูแจ้งขอยกเลิก พร้อมเหตุผล · ลบผลประเมิน หรือไม่อนุมัติ', ic:'bell', roles:['Admin','Supervisor'], p:['supervisor','admin'], cond:()=>cxList().length>0},
   {id:'followup', t:'แจ้งติดตาม', d:'สร้างข้อความแจ้งติดตามถึงผู้อำนวยการโรงเรียน พร้อมรายชื่อ คัดลอกไปส่งได้ทันที', ic:'bell', roles:['Admin','Supervisor'], p:['supervisor','admin']},
   {g:'ความพึงพอใจต่อการนิเทศ'},
   {id:'surveydash', t:'ผลความพึงพอใจ', d:'แดชบอร์ดผลประเมินความพึงพอใจของครูและผู้บริหาร (ไม่ระบุตัวตน)', ic:'heart', roles:['Admin','Supervisor'], p:['supervisor','admin']},
@@ -658,6 +660,7 @@ function notis(){
   if(u.role==='Admin'||u.role==='Supervisor'){
     const p = Object.values(Store.data.LessonPlans).filter(x=>x.status==='รอประเมิน').length;
     if(p) out.push(`มีแผนรอประเมิน ${p} รายการ`);
+    const cx=cxList().length; if(cx) out.push(`ครูแจ้งยกเลิกผลการประเมิน ${cx} รายการ`);
     const today = ymd(new Date()); const b = Object.values(Store.data.Bookings).filter(x=>x.date===today && !x.is_locked).length;
     if(b) out.push(`วันนี้มีนัดนิเทศ ${b} คาบ`);
   } else {
@@ -1377,12 +1380,13 @@ function refreshBDocs(){ const b=$('#bdocs'); if(!b) return; const tid=val('f_te
 function evalTable(E,actions){
   const staff=Store.user.role==='Admin'||Store.user.role==='Supervisor';
   if(!E.length) return '<div class="empty">ไม่พบข้อมูล</div>';
-  return `<div class="tw"><table><thead><tr><th>วันที่</th><th>แบบ</th><th>ครู</th><th>วิชา</th><th>ภาค/ปี</th><th>ผู้นิเทศ</th><th>คะแนน</th><th>ระดับ</th>${actions?'<th>เอกสารครู</th><th>รายงาน</th><th></th>':''}</tr></thead><tbody>
-   ${E.map(e=>`<tr><td>${thDate(e.date)}</td><td><span class="badge ${e.type==='A'?'':e.type==='B'?'y':'s'}">${e.type}</span></td><td>${esc(uname(e.teacher_id))}</td><td>${esc(e.subject||'-')}</td><td>${esc(e.term)}/${esc(e.year)}</td>
+  const sel=staff&&actions;
+  return `<div class="tw"><table><thead><tr>${sel?`<th style="width:34px"><input type="checkbox" style="width:auto" title="เลือกทั้งหมด" ${E.length&&E.every(e=>HSEL[e.eval_id])?'checked':''} onchange="hSelAll(this.checked)"></th>`:''}<th>วันที่</th><th>แบบ</th><th>ครู</th><th>วิชา</th><th>ภาค/ปี</th><th>ผู้นิเทศ</th><th>คะแนน</th><th>ระดับ</th>${actions?'<th>เอกสารครู</th><th>รายงาน</th><th></th>':''}</tr></thead><tbody>
+   ${E.map(e=>`<tr${cxReq(e)?' style="background:rgba(254,226,226,.55)"':''}>${sel?`<td><input type="checkbox" style="width:auto" ${HSEL[e.eval_id]?'checked':''} onchange="hSel('${e.eval_id}',this.checked)"></td>`:''}<td>${thDate(e.date)}</td><td><span class="badge ${e.type==='A'?'':e.type==='B'?'y':'s'}">${e.type}</span></td><td>${esc(uname(e.teacher_id))}</td><td>${esc(e.subject||'-')}</td><td>${esc(e.term)}/${esc(e.year)}</td>
      <td style="font-size:12px">${(e.evaluators||[]).map(uname).map(esc).join('<br>')}</td><td><b>${(+e.total_normalized).toFixed(2)}</b></td><td>${gradeBadge(e.grade)}</td>
-     ${actions?`<td>${teacherDocs(planOf(e.teacher_id,e.term,e.year,e.plan_id))}${attChips(e)}</td>
+     ${actions?`<td>${evDocs(e)}</td>
      <td><div class="row nw">${!staff?(evalDone(e)?`<button class="btn sm pri" onclick="resultPdf('${e.eval_id}')" title="ดาวน์โหลดเอกสารผลการประเมิน PDF รวมแบบ A/B/C ของภาคเรียนนี้">📄 เอกสารผลการประเมิน</button>`:`<span class="dchip off" title="การประเมินยังไม่เสร็จสิ้น">📄 เอกสารผลการประเมิน<i>ยังไม่เสร็จสิ้น</i></span>`):''}${e.pdf_drive_link?`<button class="btn sm" onclick="viewPdf('${esc(e.pdf_drive_link)}','รายงาน PDF')">📄 PDF</button>`:staff?`<button class="btn sm" onclick="makePdf('${e.eval_id}')">สร้าง PDF</button>`:''}${(e.photos||[]).map((p,i)=>`<a class="btn sm" href="${esc(p)}" target="_blank" title="รูป ${i+1}">🖼️</a>`).join('')}</div></td>
-     <td><div class="row nw"><button class="btn sm" title="พิมพ์" onclick="printEval(Store.data.Evaluations['${e.eval_id}'])">🖨️</button>${staff?`<button class="btn sm del" title="ลบ" onclick="delEval('${e.eval_id}')">🗑</button>`:''}</div></td>`:''}</tr>`).join('')}</tbody></table></div>`;
+     <td><div class="row nw"><button class="btn sm" title="พิมพ์" onclick="printEval(Store.data.Evaluations['${e.eval_id}'])">🖨️</button>${staff?`${cxReq(e)?`<span class="badge" style="background:#FEE2E2;color:#B91C1C;white-space:nowrap" title="${esc((e.cancel||{}).reason||'')}">ครูแจ้งยกเลิก</span>`:''}<button class="btn sm del" title="ลบ" onclick="delEval('${e.eval_id}')">🗑</button>`:cxCell(e)}</div></td>`:''}</tr>`).join('')}</tbody></table></div>`;
 }
 VIEWS.history = ()=>{
   const all=Object.values(Store.data.Evaluations).filter(e=>!isSelfView()||e.teacher_id===Store.user.username), years=[...new Set(all.map(e=>e.year))].sort();
@@ -1392,14 +1396,15 @@ VIEWS.history = ()=>{
     <input placeholder="🔍 ค้นหาชื่อครู / วิชา" value="${esc(HF.q)}" oninput="HF.q=this.value;clearTimeout(window._ht);window._ht=setTimeout(()=>{render();const i=document.querySelector('#view input');i.focus();i.setSelectionRange(99,99)},300)">
     <select onchange="HF.year=this.value;render()">${opt([['','ทุกปีการศึกษา'],...years],HF.year)}</select>
     <select onchange="HF.term=this.value;render()">${opt([['','ทุกภาคเรียน'],['1','ภาคเรียนที่ 1'],['2','ภาคเรียนที่ 2']],HF.term)}</select>
-    <select onchange="HF.type=this.value;render()">${opt([['','ทุกแบบประเมิน'],['A',rlabel('A')],['B',rlabel('B')],['C',rlabel('C')]],HF.type)}</select></div></div>
+    <select onchange="HF.type=this.value;render()">${opt([['','ทุกแบบประเมิน'],['A',rlabel('A')],['B',rlabel('B')],['C',rlabel('C')]],HF.type)}</select></div>
+    ${['Admin','Supervisor'].includes(Store.user.role)&&!isSelfView()?`<div class="row" style="margin-top:10px;gap:8px"><span class="muted" style="font-size:13px">ติ๊กเลือกรายการในตาราง แล้วกดลบได้ทีละหลายรายการ (เช่น ผลที่ทดสอบระบบ หรือผลที่บันทึกซ้ำ)</span><span class="sp"></span><button class="btn sm del" ${hSelN()?'':'disabled'} onclick="delEvals()">🗑 ลบที่เลือก (${hSelN()})</button>${hSelN()?'<button class="btn sm" onclick="HSEL={};render()">ล้างการเลือก</button>':''}</div>`:''}</div>
    <div class="card glass reveal"><h3>ผลการประเมิน <span class="badge">${E.length}</span></h3>${evalTable(E,true)}</div>`;
 };
 AFTER.history = ()=>initReveal();
 async function delEval(id){ if(!(await SW.confirm('ลบผลการประเมินนี้?','ไม่สามารถกู้คืนได้'))) return;
   const e=Store.data.Evaluations[id], ops=[{c:'Evaluations',op:'delete',id}];
-  if(e.plan_id && Store.data.LessonPlans[e.plan_id]) ops.push({c:'LessonPlans',op:'merge',id:e.plan_id,data:{status:'รอประเมิน',eval_id:'',score:null}});
-  await busy(()=>commit(ops)); render(); }
+  ops.push(...evRevertOps(e));
+  await busy(()=>commit(ops)); delete HSEL[id]; render(); updateNoti(); }
 
 /* ---------- Aggregate ---------- */
 let AGW={A:40,B:30,C:30}, AGF={year:'',term:''};
@@ -2550,6 +2555,52 @@ async function nxOpen(sc,regen){ let r=!regen&&nxRep(sc); if(!r) r=await nxMakeR
      <button class="btn pri" onclick="nxCopy()">📋 คัดลอกข้อความ</button></div>`,'640px');
   if(cur==='notifyexec') setTimeout(()=>{ const v=$('#view'); if(v) v.innerHTML=VIEWS.notifyexec(); initReveal(); },0); }
 async function nxCopy(){ const t=$('#nx_msg'); if(!t) return; try{ await navigator.clipboard.writeText(t.value); }catch(e){ t.select(); document.execCommand('copy'); } toast('คัดลอกข้อความแล้ว'); }
+
+/* ---- ลบผลการประเมินทีละหลายรายการ (ศน./แอดมินระบบ) + ครูแจ้งยกเลิก ---- */
+let HSEL={};
+const hSelN=()=>Object.keys(HSEL).filter(k=>HSEL[k]&&(Store.data.Evaluations||{})[k]).length;
+function hSel(id,on){ if(on) HSEL[id]=1; else delete HSEL[id]; render(); }
+function hSelAll(on){ const rows=[...document.querySelectorAll('#view tbody input[type=checkbox]')]; rows.forEach(c=>{ const m=(c.getAttribute('onchange')||'').match(/hSel\('([^']+)'/); if(m){ if(on) HSEL[m[1]]=1; else delete HSEL[m[1]]; } }); render(); }
+/* เมื่อลบผลประเมิน: แผน/ผลงานที่ผูกไว้กลับเป็น “รอประเมิน” */
+function evRevertOps(e){ const ops=[];
+  if(e.plan_id && (Store.data.LessonPlans||{})[e.plan_id]) ops.push({c:'LessonPlans',op:'merge',id:e.plan_id,data:{status:'รอประเมิน',eval_id:'',score:null}});
+  if(e.work_id && (Store.data.Works||{})[e.work_id]) ops.push({c:'Works',op:'merge',id:e.work_id,data:{status:'รอประเมิน',eval_id:'',score:null}});
+  return ops; }
+async function delEvals(){ const ids=Object.keys(HSEL).filter(k=>HSEL[k]&&(Store.data.Evaluations||{})[k]); if(!ids.length) return;
+  if(!(await SW.confirm('ลบผลการประเมิน '+ids.length+' รายการ?','ไม่สามารถกู้คืนได้ · แผน/ผลงานที่ผูกไว้จะกลับเป็น “รอประเมิน”'))) return;
+  const ops=[]; ids.forEach(id=>{ const e=Store.data.Evaluations[id]; ops.push({c:'Evaluations',op:'delete',id},...evRevertOps(e)); });
+  for(let i=0;i<ops.length;i+=150){ const part=ops.slice(i,i+150); await busy(()=>commit(part)); }
+  HSEL={}; SW.ok('ลบแล้ว '+ids.length+' รายการ'); shell(); go(cur); updateNoti(); }
+/* เอกสารในแถว: แสดงเฉพาะแบบที่ตั้งให้แนบแผน/รูป/ไฟล์ (ใช้ตัวเลือกที่เก็บไว้กับผลประเมินนั้น) */
+function evDocs(e){ const o=(e.rubric&&e.rubric.cats)?roptsOf(e.rubric,e.type):ropts(e.type), hasAtt=(e.photos||[]).some(Boolean)||(e.files||[]).some(Boolean);
+  const plan=(o.plan||e.plan_id)?teacherDocs(planOf(e.teacher_id,e.term,e.year,e.plan_id),false,undefined,o.docsOff):'';
+  const att=(o.photos>0||o.files>0||hasAtt)?attChips(e):'';
+  return plan||att?plan+att:'<span class="muted">-</span>'; }
+/* ครูแจ้งยกเลิก */
+const cxReq=e=>!!(e&&e.cancel&&e.cancel.status==='requested');
+const cxList=()=>Object.values(Store.data.Evaluations||{}).filter(cxReq).sort((a,b)=>String(b.cancel.at||'').localeCompare(String(a.cancel.at||'')));
+function cxCell(e){ const c=e.cancel||{};
+  if(c.status==='requested') return `<span class="badge" style="background:#FEE2E2;color:#B91C1C;font-weight:600;white-space:nowrap" title="เหตุผล: ${esc(c.reason||'')}">แจ้งยกเลิก</span>`;
+  return (c.status==='rejected'?`<span class="badge s" title="${esc(c.note||'')}">ไม่อนุมัติยกเลิก</span>`:'')+`<button class="badge" style="border:1px solid #FCA5A5;background:#fff;color:#B91C1C;cursor:pointer" onclick="cxAsk('${e.eval_id}')">ยกเลิก</button>`; }
+async function cxAsk(id){ const e=Store.data.Evaluations[id]; if(!e) return;
+  const r=window.Swal?await Swal.fire({icon:'warning',title:'แจ้งยกเลิกผลการประเมินนี้?',html:`แบบ ${esc(e.type)} · ${esc(thDate(e.date))} · คะแนน ${(+e.total_normalized||0).toFixed(2)}<br><span style="font-size:13px;color:#6b7280">ระบบจะส่งเรื่องให้ ศน. และแอดมินระบบพิจารณา</span>`,
+      input:'textarea',inputPlaceholder:'ระบุเหตุผลที่ยกเลิก เช่น ศน. บันทึกซ้ำ / เป็นการทดสอบระบบ',showCancelButton:true,confirmButtonText:'ยืนยันแจ้งยกเลิก',cancelButtonText:'ปิด',confirmButtonColor:'#DC2626',
+      inputValidator:v=>!String(v||'').trim()?'กรุณาระบุเหตุผล':undefined}):{isConfirmed:true,value:prompt('เหตุผลที่ยกเลิก')};
+  if(!r.isConfirmed||!String(r.value||'').trim()) return;
+  const res=await busy(()=>MODE==='gas'?gasCall('apiCancelRequest',Store.token,id,String(r.value).trim()):Promise.resolve({cancel:{status:'requested',reason:String(r.value).trim(),at:new Date().toISOString(),by:Store.user.username}}));
+  e.cancel=res.cancel; SW.ok('แจ้งยกเลิกแล้ว','รอ ศน. หรือแอดมินระบบดำเนินการ'); render(); }
+VIEWS.cancelreq=()=>{ const L=cxList();
+  return `<div class="card glass reveal"><div class="muted" style="font-size:13.5px;line-height:1.7">ผลการประเมินที่ครูแจ้งขอยกเลิก · ตรวจเหตุผลแล้วเลือก <b>ลบผลประเมิน</b> (แผน/ผลงานที่ผูกไว้กลับเป็นรอประเมิน) หรือ <b>ไม่อนุมัติ</b> (ผลคงเดิม ครูเห็นสถานะ “ไม่อนุมัติยกเลิก”)</div></div>
+   <div class="card glass reveal"><div class="tw"><table><thead><tr><th>วันที่แจ้ง</th><th>ครู</th><th>แบบ</th><th>วันที่นิเทศ</th><th>คะแนน</th><th>ผู้นิเทศ</th><th>เหตุผล</th><th></th></tr></thead><tbody>
+   ${L.map(e=>`<tr><td>${thDate(e.cancel.at)}</td><td><b>${esc(uname(e.teacher_id))}</b><div class="muted">${esc(schOf(e))}</div></td><td><span class="badge ${e.type==='A'?'':e.type==='B'?'y':'s'}">${e.type}</span></td><td>${thDate(e.date)}</td><td>${(+e.total_normalized||0).toFixed(2)}</td>
+     <td style="font-size:12px">${(e.evaluators||[]).map(uname).map(esc).join('<br>')}</td><td style="max-width:280px">${esc(e.cancel.reason||'')}</td>
+     <td class="row"><button class="btn sm" onclick="printEval(Store.data.Evaluations['${e.eval_id}'])">ดูผล</button><button class="btn sm del" onclick="delEval('${e.eval_id}')">🗑 ลบผลประเมิน</button><button class="btn sm" onclick="cxReject('${e.eval_id}')">ไม่อนุมัติ</button></td></tr>`).join('')||'<tr><td colspan="8" class="empty">ไม่มีรายการที่ครูแจ้งยกเลิก</td></tr>'}</tbody></table></div></div>`; };
+AFTER.cancelreq=()=>initReveal();
+async function cxReject(id){ const e=Store.data.Evaluations[id]; if(!e) return;
+  const r=window.Swal?await Swal.fire({title:'ไม่อนุมัติการยกเลิก',input:'text',inputPlaceholder:'แจ้งเหตุผลให้ครู (ไม่บังคับ)',showCancelButton:true,confirmButtonText:'ยืนยัน',cancelButtonText:'ปิด',confirmButtonColor:getCss('--p')}):{isConfirmed:true,value:''};
+  if(!r.isConfirmed) return;
+  await busy(()=>commit([{c:'Evaluations',op:'merge',id,data:{cancel:{...e.cancel,status:'rejected',note:String(r.value||'').trim(),done_at:new Date().toISOString(),done_by:Store.user.username}}}]));
+  SW.ok('บันทึกแล้ว'); shell(); go(cxList().length?'cancelreq':'history'); updateNoti(); }
 
 /* ---- ตั้งค่า ---- */
 function certInit(){ const c=certCfg(); FORM.certbg=c.bg; FORM.certseal=c.seal; FORM.certsig1=c.s1.sig; FORM.certsig2=c.s2.sig; }

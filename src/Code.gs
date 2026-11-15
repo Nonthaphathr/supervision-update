@@ -814,6 +814,17 @@ function authorizeOnce(){
 /* ---------------- ประเมินความพึงพอใจ (ไม่ระบุตัวตน) ----------------
    ชีต Surveys: ไม่เก็บ username และไม่เก็บเวลาบันทึก · แทรกแถวตำแหน่งสุ่มเพื่อไม่ให้ลำดับแถวเผยลำดับเวลา
    ไม่อยู่ใน COLLS จึงเขียน/ลบผ่าน apiCommit ไม่ได้ — เขียนได้เฉพาะสองฟังก์ชันด้านล่าง */
+/* ครูแจ้งยกเลิกผลการประเมินของตนเอง (ครูเขียนชุด Evaluations ผ่าน apiCommit ไม่ได้ จึงมีฟังก์ชันเฉพาะ) */
+function apiCancelRequest(token, id, reason){
+  const u = me_(token); need_(u,['Teacher']);
+  reason = String(reason||'').trim().slice(0,500); if (!reason) throw new Error('กรุณาระบุเหตุผลที่ยกเลิก');
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try{ const ev = readColl_('Evaluations')[id];
+    if (!ev || ev.teacher_id!==u.username) throw new Error('ไม่พบผลการประเมินของท่าน');
+    const c = {status:'requested', reason:reason, at:new Date().toISOString(), by:u.username};
+    writeColl_('Evaluations',[{op:'merge', id:id, data:{cancel:c}}]);
+    return JSON.stringify({ok:true, cancel:c});
+  } finally { lock.releaseLock(); } }
 function svRound_(){ const s = getSettings_(); return String(s.academic_year)+'/'+String(s.term); }
 function svClean_(sv, p){
   const items = (sv.items||[]).filter(x=>x.type!=='section'), byId = {}; items.forEach(x=>{ byId[x.id]=x; });
