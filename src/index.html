@@ -432,7 +432,7 @@ const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
 const APP_VERSION = '1.3.33';
 const APP_CHANGELOG = [
-  {v:'1.3.33', d:'16 พ.ย. 2569', n:['แบบประเมินแผน: ติ๊กช่องไฟล์ของครู (แผน/หลังสอน/อื่น ๆ) แล้วผูกกับหน้า “ส่งแผน” ของครูด้วย — ไม่ติ๊ก = ซ่อนช่องอัปโหลดนั้น (ค่าเริ่มต้น = แสดงทั้งหมดเหมือนเดิม)','เกียรติบัตร PDF: แก้ลายเซ็นติดกรอบดำ (ดึงไฟล์ลายเซ็นต้นฉบับจาก Drive เพื่อคงพื้นโปร่งใส)']},
+  {v:'1.3.33', d:'16 พ.ย. 2569', n:['ศน. กด “ดึงเข้าฟอร์ม” จะมี modal เตือนว่าเริ่มประเมินแล้วครูแก้ไข/อัปไฟล์ไม่ได้ (สถานะ → กำลังประเมิน); ครูมี modal แจ้งก่อนอัปไฟล์','แบบประเมินแผน: ติ๊กช่องไฟล์ของครู (แผน/หลังสอน/อื่น ๆ) แล้วผูกกับหน้า “ส่งแผน” ของครูด้วย — ไม่ติ๊ก = ซ่อนช่องอัปโหลดนั้น (ค่าเริ่มต้น = แสดงทั้งหมดเหมือนเดิม)','เกียรติบัตร PDF: แก้ลายเซ็นติดกรอบดำ (ดึงไฟล์ลายเซ็นต้นฉบับจาก Drive เพื่อคงพื้นโปร่งใส)']},
   {v:'1.3.32', d:'15 พ.ย. 2569', n:['ยกเลิกผลการประเมินได้ 2 แบบ: ส่งกลับไปรอประเมิน (แผน/ผลงานกลับไปให้ประเมินใหม่) หรือ ลบรายการออกจากระบบ','รายการที่ถูกส่งกลับ แสดง “ยกเลิกและส่งกลับเมื่อ…” และเมื่อครูแก้ไข/อัปไฟล์ใหม่ แสดง “แก้ไขเมื่อ…” สีเขียว']},
   {v:'1.3.31', d:'15 พ.ย. 2569', n:['ประวัติการประเมิน: ศน./แอดมินระบบ ติ๊กเลือกแล้วลบผลการประเมินทีละหลายรายการได้','ครูกด “ยกเลิก” ผลการประเมินพร้อมระบุเหตุผล ส่งไปที่เมนู “ครูแจ้งยกเลิก” ของ ศน./แอดมินระบบ','ตารางประวัติของครู แสดงเอกสารเฉพาะแบบประเมินที่ให้แนบเอกสาร/รูป']},
   {v:'1.3.30', d:'14 พ.ย. 2569', n:['ศน.: เมนู “คัดลอกข้อความแจ้งผู้บริหาร” ขึ้นเมื่อมีโรงเรียนนิเทศครบถ้วน พร้อมลิงก์รายงานสรุปผลฉบับสมบูรณ์ของโรงเรียน','เพิ่มคู่มือผู้บริหาร และปรับปรุงคู่มือ ศน.']},
@@ -663,7 +663,7 @@ function render(){ const v=$('#view'); if(!v) return; v.className='view'; void v
 function notis(){
   const u=Store.user, out=[];
   if(u.role==='Admin'||u.role==='Supervisor'){
-    const p = Object.values(Store.data.LessonPlans).filter(x=>x.status==='รอประเมิน').length;
+    const p = Object.values(Store.data.LessonPlans).filter(x=>(x.status==='รอประเมิน'||x.status==='กำลังประเมิน')).length;
     if(p) out.push(`มีแผนรอประเมิน ${p} รายการ`);
     const cx=cxList().length; if(cx) out.push(`ครูแจ้งยกเลิกผลการประเมิน ${cx} รายการ`);
     const today = ymd(new Date()); const b = Object.values(Store.data.Bookings).filter(x=>x.date===today && !x.is_locked).length;
@@ -1042,7 +1042,12 @@ function evalView(T){ if(!EV||EV.type!==T) newEval(T); const k=rkind(T), o=ropts
     +`<div class="card glass reveal"><h3>${esc(rub(T).name)}</h3>${pre}${rank}${note}${questions(T,k==='visit')}</div>`+summaryCard(); }
 function evalAfter(T){ bindDrops(DZMETA); updateSummary(); initReveal();
   if(ropts(T).plan){ refreshBDocs(); const ft=$('#f_term'), fy=$('#f_year'); if(ft) ft.addEventListener('change',refreshBDocs); if(fy) fy.addEventListener('change',refreshBDocs); } }
-function pullPlan(id){ const p=Store.data.LessonPlans[id]; const t=Store.data.Users[p.teacher_id]||{};
+/* ศน. กด “ดึงเข้าฟอร์ม” = เริ่มประเมิน: ล็อกให้ครูแก้ไข/อัปไฟล์ใหม่ไม่ได้ (สถานะ → กำลังประเมิน) */
+async function startEvalLock(coll,id,what){ const x=((Store.data[coll]||{})[id]); if(!x) return false; if(x.status!=='รอประเมิน') return true;
+  const r=await Swal.fire({icon:'warning',title:'เริ่มประเมิน'+what+'นี้?',html:'<div style="text-align:left;line-height:1.7">เมื่อกดเริ่มประเมิน <b>ครูจะไม่สามารถแก้ไขรายละเอียดหรืออัปโหลดไฟล์ใหม่ได้อีก</b><br>สถานะจะเปลี่ยนเป็น “กำลังประเมิน” จนกว่าจะบันทึกผลประเมิน (หรือยกเลิกส่งกลับให้ครูแก้ไข)</div>',showCancelButton:true,confirmButtonText:'เริ่มประเมิน',cancelButtonText:'ยังก่อน',confirmButtonColor:getCss('--p')});
+  if(!r.isConfirmed) return false;
+  await busy(()=>commit([{c:coll,op:'merge',id,data:{status:'กำลังประเมิน'}}])); return true; }
+async function pullPlan(id){ const p=Store.data.LessonPlans[id]; if(!p) return; if(!(await startEvalLock('LessonPlans',id,'แผน'))) return; const t=Store.data.Users[p.teacher_id]||{};
   newEval((EV&&EV.type)||'B',{plan_id:id,teacher_id:p.teacher_id,subject:p.subject,group:p.group||t.group||'',grade_level:p.grade_level||'',term:p.term,year:p.year,school:t.school||schools()[0]||'',extra:{grade_rank:p.rank||''}});
   render(); setTimeout(()=>$('.sticky-prog').scrollIntoView({behavior:'smooth'}),100); toast('ดึงข้อมูลแผนเข้าฟอร์มแล้ว'); }
 
@@ -1097,11 +1102,11 @@ function workWaitCard(T){ const L=Object.values(Store.data.Works||{}).filter(x=>
    ${L.length?L.map(x=>`<tr><td>${thDate(x.created_at)}${retNote(x)}</td><td>${esc(uname(x.teacher_id))}</td><td><b>${esc(x.subject||'-')}</b><div class="muted">${esc(x.grade_level||'')}</div></td><td>${esc(x.term)}/${esc(x.year)}</td><td>${workChips(x)}</td>
      <td><button class="btn sm pri" onclick="pullWork('${x.work_id}')">ดึงเข้าฟอร์ม →</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">ยังไม่มีผลงานที่ครูส่งมา</td></tr>'}
    </tbody></table></div></div>`; }
-function pullWork(id){ const w=(Store.data.Works||{})[id]; if(!w) return; const t=Store.data.Users[w.teacher_id]||{};
+async function pullWork(id){ const w=(Store.data.Works||{})[id]; if(!w) return; if(!(await startEvalLock('Works',id,'ผลงาน'))) return; const t=Store.data.Users[w.teacher_id]||{};
   const pr={work_id:id,teacher_id:w.teacher_id,subject:w.subject||'',group:w.group||t.group||'',grade_level:w.grade_level||'',term:w.term,year:w.year,school:w.school||t.school||mySchools()[0]||'',extra:{grade_rank:w.rank||t.rank||''}};
   (w.photos||[]).forEach((u,i)=>{ if(i<4) pr['photo'+(i+1)]=u||''; }); (w.files||[]).forEach((u,i)=>{ if(i<3) pr['file'+(i+1)]=u||''; });
   newEval(w.type,pr); render(); setTimeout(()=>{ const e=$('.sticky-prog'); if(e) e.scrollIntoView({behavior:'smooth'}); },100); toast('ดึงผลงานเข้าฟอร์มแล้ว'); }
-['A','B','C'].forEach(T=>{ VIEWS['work'+T]=()=>workView(T); AFTER['work'+T]=()=>{ bindDrops(k=>({section:'ผลงานครู',year:val('w_year')||Store.settings.academic_year,sub:'ภาคเรียนที่ '+(val('w_term')||Store.settings.term)+'/'+clean(Store.user.school||'ไม่ระบุโรงเรียน')+'/'+clean(Store.user.name),prefix:'แบบ'+T+'_'+ymd(new Date())+'_'})); initReveal(); }; });
+['A','B','C'].forEach(T=>{ VIEWS['work'+T]=()=>workView(T); AFTER['work'+T]=()=>{ teacherUpNotice('work'+T); bindDrops(k=>({section:'ผลงานครู',year:val('w_year')||Store.settings.academic_year,sub:'ภาคเรียนที่ '+(val('w_term')||Store.settings.term)+'/'+clean(Store.user.school||'ไม่ระบุโรงเรียน')+'/'+clean(Store.user.name),prefix:'แบบ'+T+'_'+ymd(new Date())+'_'})); initReveal(); }; });
 
 /* ---------- ส่งแผน ---------- */
 let PLAN_EDIT=null;
@@ -1129,7 +1134,10 @@ VIEWS.submitPlan = ()=>{
      <td class="row"><button class="btn sm" ${x.pdf_plan_url?'':'disabled'} onclick="viewPdf('${esc(x.pdf_plan_url)}','แผน')">📄 ดูแผน</button>${x.status==='รอประเมิน'?`<button class="btn sm" onclick="editPlan('${x.plan_id}')">✏️</button><button class="btn sm del" onclick="delPlan('${x.plan_id}')">🗑</button>`:''}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">ยังไม่มีแผนที่ส่ง</td></tr>'}
    </tbody></table></div></div>`;
 };
-AFTER.submitPlan = ()=>{ bindDrops(k=>({section:'แผนการจัดการเรียนรู้',year:val('p_year')||Store.settings.academic_year,sub:'ภาคเรียนที่ '+(val('p_term')||Store.settings.term)+'/'+clean(Store.user.school||'ไม่ระบุโรงเรียน')+'/'+clean(Store.user.name),prefix:(k==='pdf_plan'?'แผน_':k==='post_note'?'หลังสอน_':clean((tfBlocks().find(b=>b.id===k)||{}).label||'ไฟล์')+'_')+ymd(new Date())+'_'})); initReveal(); };
+function teacherUpNotice(key){ if(Store.user.role!=='Teacher'||TUP_SEEN[key]) return; TUP_SEEN[key]=1;
+  Swal.fire({icon:'info',title:'ก่อนอัปโหลดไฟล์',html:'<div style="text-align:left;line-height:1.7">ครูสามารถ <b>อัปโหลดไฟล์แก้ไขแทนที่ไฟล์เดิมได้ตลอดเวลา</b> เมื่ออยู่ในสถานะ “รอประเมิน”<br><br>เมื่อ ศน. <b>กดเริ่มประเมิน</b> ครูจะไม่สามารถแก้ไขรายละเอียดหรืออัปโหลดไฟล์ใหม่ได้อีก</div>',confirmButtonText:'รับทราบ',confirmButtonColor:getCss('--p')}); }
+const TUP_SEEN={};
+AFTER.submitPlan = ()=>{ teacherUpNotice('plan'); bindDrops(k=>({section:'แผนการจัดการเรียนรู้',year:val('p_year')||Store.settings.academic_year,sub:'ภาคเรียนที่ '+(val('p_term')||Store.settings.term)+'/'+clean(Store.user.school||'ไม่ระบุโรงเรียน')+'/'+clean(Store.user.name),prefix:(k==='pdf_plan'?'แผน_':k==='post_note'?'หลังสอน_':clean((tfBlocks().find(b=>b.id===k)||{}).label||'ไฟล์')+'_')+ymd(new Date())+'_'})); initReveal(); };
 function editPlan(id){ PLAN_EDIT={...Store.data.LessonPlans[id]}; tfBlocks().forEach(b=>{ FORM[b.id]=tfUrl(PLAN_EDIT,b.id); }); render(); }
 async function delPlan(id){ if(!(await SW.confirm('ลบแผนนี้?'))) return; await busy(()=>commit([{c:'LessonPlans',op:'delete',id}])); render(); }
 async function savePlan(){
