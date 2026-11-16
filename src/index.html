@@ -432,7 +432,7 @@ const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
 const APP_VERSION = '1.3.33';
 const APP_CHANGELOG = [
-  {v:'1.3.33', d:'16 พ.ย. 2569', n:['แบบประเมินแผน: เพิ่มสวิตช์ เปิด/ปิด “แสดงไฟล์ที่ครูแนบ” ในหน้าประเมิน (ค่าเริ่มต้น = เปิด เหมือนเดิม)','เกียรติบัตร PDF: แก้ลายเซ็นติดกรอบดำ (ดึงไฟล์ลายเซ็นต้นฉบับจาก Drive เพื่อคงพื้นโปร่งใส)']},
+  {v:'1.3.33', d:'16 พ.ย. 2569', n:['แบบประเมินแผน: ติ๊กช่องไฟล์ของครู (แผน/หลังสอน/อื่น ๆ) แล้วผูกกับหน้า “ส่งแผน” ของครูด้วย — ไม่ติ๊ก = ซ่อนช่องอัปโหลดนั้น (ค่าเริ่มต้น = แสดงทั้งหมดเหมือนเดิม)','เกียรติบัตร PDF: แก้ลายเซ็นติดกรอบดำ (ดึงไฟล์ลายเซ็นต้นฉบับจาก Drive เพื่อคงพื้นโปร่งใส)']},
   {v:'1.3.32', d:'15 พ.ย. 2569', n:['ยกเลิกผลการประเมินได้ 2 แบบ: ส่งกลับไปรอประเมิน (แผน/ผลงานกลับไปให้ประเมินใหม่) หรือ ลบรายการออกจากระบบ','รายการที่ถูกส่งกลับ แสดง “ยกเลิกและส่งกลับเมื่อ…” และเมื่อครูแก้ไข/อัปไฟล์ใหม่ แสดง “แก้ไขเมื่อ…” สีเขียว']},
   {v:'1.3.31', d:'15 พ.ย. 2569', n:['ประวัติการประเมิน: ศน./แอดมินระบบ ติ๊กเลือกแล้วลบผลการประเมินทีละหลายรายการได้','ครูกด “ยกเลิก” ผลการประเมินพร้อมระบุเหตุผล ส่งไปที่เมนู “ครูแจ้งยกเลิก” ของ ศน./แอดมินระบบ','ตารางประวัติของครู แสดงเอกสารเฉพาะแบบประเมินที่ให้แนบเอกสาร/รูป']},
   {v:'1.3.30', d:'14 พ.ย. 2569', n:['ศน.: เมนู “คัดลอกข้อความแจ้งผู้บริหาร” ขึ้นเมื่อมีโรงเรียนนิเทศครบถ้วน พร้อมลิงก์รายงานสรุปผลฉบับสมบูรณ์ของโรงเรียน','เพิ่มคู่มือผู้บริหาร และปรับปรุงคู่มือ ศน.']},
@@ -520,7 +520,7 @@ const RKINDS = {teach:'ประเมินการสอน (สังเก�
    ถ้าไม่ได้ตั้ง ใช้ค่าเริ่มต้นตามประเภทแบบ (ระบบเดิมจึงทำงานเหมือนเดิม) */
 const ROPT_DEF = {teach:{photos:2,files:0,plan:false,rank:false,upP:'sup',upF:'sup'}, visit:{photos:2,files:0,plan:false,rank:false,upP:'sup',upF:'sup'}, plan:{photos:0,files:0,plan:true,rank:true,upP:'sup',upF:'sup'}};
 function roptsOf(r,t){ const d=ROPT_DEF[kindOfRub(r,t)], o=(r&&r.opts)||{}, cl=(v,a,b,x)=>{ v=Math.round(+v); return isFinite(v)?Math.max(a,Math.min(b,v)):x; };
-  return {photos:o.photos!=null?cl(o.photos,0,4,d.photos):d.photos, files:o.files!=null?cl(o.files,0,3,d.files):d.files, plan:o.plan!=null?!!o.plan:d.plan, rank:o.rank!=null?!!o.rank:d.rank, upP:(o.upP||o.up)==='teacher'?'teacher':'sup', upF:(o.upF||o.up)==='teacher'?'teacher':'sup', wsubj:!!o.wsubj, docsOn:o.docsOn!==false, docsOff:o.docsOn===false?tfOn().map(b=>b.id):(Array.isArray(o.docsOff)?o.docsOff.filter(x=>typeof x==='string').slice(0,12):(Array.isArray(o.docs)?tfOn().map(b=>b.id).filter(x=>o.docs.indexOf(x)<0):[]))}; }
+  return {photos:o.photos!=null?cl(o.photos,0,4,d.photos):d.photos, files:o.files!=null?cl(o.files,0,3,d.files):d.files, plan:o.plan!=null?!!o.plan:d.plan, rank:o.rank!=null?!!o.rank:d.rank, upP:(o.upP||o.up)==='teacher'?'teacher':'sup', upF:(o.upF||o.up)==='teacher'?'teacher':'sup', wsubj:!!o.wsubj, docsOff:Array.isArray(o.docsOff)?o.docsOff.filter(x=>typeof x==='string').slice(0,12):(Array.isArray(o.docs)?tfOn().map(b=>b.id).filter(x=>o.docs.indexOf(x)<0):[])}; }
 const ropts = t=>roptsOf(rub(t),t);
 function kindOfRub(r,t){ if(r&&RKINDS[r.kind]) return r.kind; const n=String((r&&r.name)||'');
   const dk=(DEFAULT_RUBRICS[t]||{}).kind||'teach';
@@ -739,6 +739,9 @@ function tfBlocks(){ const s=(Store.settings||{}).teacher_files, L=Array.isArray
 const tfOn=()=>tfBlocks().filter(b=>b.on);
 function tfUrl(p,id){ if(!p) return ''; const c=TF_CORE.find(d=>d.id===id); return c?(p[c.key]||''):((p.tfiles||{})[id]||''); }
 function tfShort(b){ const c=TF_CORE.find(d=>d.id===b.id); return c?c.short:b.label; }
+/* ช่องอัปโหลดในหน้า “ส่งแผน” ผูกกับการติ๊กของแบบประเมินประเภทแผน: ช่องที่ไม่ติ๊กในแบบประเมินแผนทุกแบบ = ซ่อน */
+function tfUpOn(id){ const L=['A','B','C'].filter(t=>ropts(t).plan); return !L.length||L.some(t=>ropts(t).docsOff.indexOf(id)<0); }
+const tfUpBlocks=()=>tfOn().filter(b=>tfUpOn(b.id));
 function tfShow(p,ex){ ex=ex||[]; return tfBlocks().filter(b=>ex.indexOf(b.id)<0&&(b.on||(p&&tfUrl(p,b.id)))); }
 function tfDocBtns(p,ids){ return tfShow(p,ids).map(b=>{ const c=TF_CORE.find(d=>d.id===b.id), u=tfUrl(p,b.id);
   return `<button class="btn sm" ${u?'':'disabled'} onclick="viewPdf('${esc(u)}','${esc(b.label)}')">${c?c.ic:'📎'} ${esc(tfShort(b))}</button>`; }).join(''); }
@@ -1113,7 +1116,7 @@ VIEWS.submitPlan = ()=>{
     <label class="f">ชื่อแผน / เรื่อง<input id="p_title" value="${esc(p.title||'')}"></label>
     <label class="f">ภาค/ปีการศึกษา<div class="row"><select id="p_term" style="width:90px">${opt(['1','2'],p.term||Store.settings.term)}</select><input id="p_year" value="${esc(p.year||Store.settings.academic_year)}" style="flex:1"></div></label>
    </div></div>
-   <div class="card glass reveal"><h3>อัปโหลดเอกสาร</h3>${PLAN_EDIT?'<div class="muted" style="margin:-4px 0 12px">อัปโหลดผิด? กด ✕ ที่ไฟล์เดิมแล้วอัปโหลดใหม่ เมื่อกด “บันทึกการแก้ไข” ไฟล์ใหม่จะแทนที่ไฟล์เดิม (ไฟล์เดิมถูกย้ายลงถังขยะ)</div>':''}<div class="grid g2">${tfOn().map(b=>dropzone(b.id,b.label+(b.type==='pdf'?' (PDF)':''),TF_TYPES[b.type].acc,FORM[b.id])).join('')}</div></div>
+   <div class="card glass reveal"><h3>อัปโหลดเอกสาร</h3>${PLAN_EDIT?'<div class="muted" style="margin:-4px 0 12px">อัปโหลดผิด? กด ✕ ที่ไฟล์เดิมแล้วอัปโหลดใหม่ เมื่อกด “บันทึกการแก้ไข” ไฟล์ใหม่จะแทนที่ไฟล์เดิม (ไฟล์เดิมถูกย้ายลงถังขยะ)</div>':''}<div class="grid g2">${tfUpBlocks().map(b=>dropzone(b.id,b.label+(b.type==='pdf'?' (PDF)':''),TF_TYPES[b.type].acc,FORM[b.id])).join('')}</div></div>
    <div class="card glass reveal"><h3>บันทึกผลหลังการจัดการเรียนรู้</h3><div class="grid g2">
     <label class="f">วิทยฐานะ<select id="p_rank">${opt([['','— ไม่ระบุ (เช่น ครูอัตราจ้าง) —'],'ครูผู้ช่วย','ครู (ไม่มีวิทยฐานะ)','ครูชำนาญการ','ครูชำนาญการพิเศษ','ครูเชี่ยวชาญ','ครูเชี่ยวชาญพิเศษ'],p.rank!=null?p.rank:((Store.data.Users[Store.user.username]||{}).rank||''))}</select></label><div></div>
     <label class="f">ผลการจัดการเรียนรู้<textarea id="p_result">${esc(p.result||'')}</textarea></label>
@@ -1132,8 +1135,8 @@ async function delPlan(id){ if(!(await SW.confirm('ลบแผนนี้?')))
 async function savePlan(){
   const id=(PLAN_EDIT&&PLAN_EDIT.plan_id)||uid('LP');
   const TB=tfBlocks(), bp=TB.find(b=>b.id==='pdf_plan'), bn=TB.find(b=>b.id==='post_note'), tf={...((PLAN_EDIT&&PLAN_EDIT.tfiles)||{})};
-  TB.forEach(b=>{ if(!b.core&&b.on) tf[b.id]=FORM[b.id]||''; });
-  const TFV={ planOn:bp.on, pdf_plan_url:bp.on?(FORM.pdf_plan||''):((PLAN_EDIT&&PLAN_EDIT.pdf_plan_url)||''), post_note_url:bn.on?(FORM.post_note||''):((PLAN_EDIT&&PLAN_EDIT.post_note_url)||''), tfiles:{} };
+  TB.forEach(b=>{ if(!b.core&&b.on&&tfUpOn(b.id)) tf[b.id]=FORM[b.id]||''; });
+  const TFV={ planOn:bp.on&&tfUpOn('pdf_plan'), pdf_plan_url:(bp.on&&tfUpOn('pdf_plan'))?(FORM.pdf_plan||''):((PLAN_EDIT&&PLAN_EDIT.pdf_plan_url)||''), post_note_url:(bn.on&&tfUpOn('post_note'))?(FORM.post_note||''):((PLAN_EDIT&&PLAN_EDIT.post_note_url)||''), tfiles:{} };
   TFV.tfnames={...((PLAN_EDIT&&PLAN_EDIT.tfnames)||{})}; Object.keys(tf).forEach(k=>{ if(tf[k]){ TFV.tfiles[k]=tf[k]; const b=TB.find(x=>x.id===k); if(b) TFV.tfnames[k]=b.label; } });
   Object.keys(TFV.tfnames).forEach(k=>{ if(!TFV.tfiles[k]) delete TFV.tfnames[k]; });
   const d={ plan_id:id, teacher_id:(PLAN_EDIT&&PLAN_EDIT.teacher_id)||Store.user.username, group:val('p_group'), subject:val('p_subject'), grade_level:val('p_level'), unit:val('p_unit'), title:val('p_title'),
@@ -1921,7 +1924,7 @@ function tfAdd(){ TFB.push({id:'tf'+Date.now().toString(36).slice(-6),label:'ไ
 async function tfDel(i){ if(!(await SW.confirm('ลบช่องนี้?','เมื่อกด 💾 บันทึก ไฟล์ที่ครูเคยแนบในช่องนี้จะถูกย้ายลงถังขยะของ Drive และหายจากแผนของครู ถ้าแค่ไม่อยากให้ครูเห็นช่อง ให้ใช้ “ซ่อน” แทน (เอาติ๊ก “แสดง” ออก) ไฟล์จะยังอยู่ครบ'))) return; TFB.splice(i,1); render(); }
 function tfReset(){ TFB=TF_CORE.map(d=>({id:d.id,label:d.label,type:'pdf',on:true,core:true})); render(); }
 async function tfSave(){ const L=TFB.map(b=>({id:b.id,label:String(b.label||'').trim().slice(0,60)||((TF_CORE.find(d=>d.id===b.id)||{}).label)||'ไฟล์เอกสาร',type:b.core?'pdf':b.type,on:!!b.on})); await saveSet({teacher_files:L}); }
-function rbDoc(id,chk){ const O=roptsOf(RB[RBT],RBT); let off=O.docsOff.filter(x=>x!==id); if(!chk) off.push(id); const n={...O,docsOff:off,docsOn:true}; delete n.docs; RB[RBT].opts=n; render(); }
+function rbDoc(id,chk){ const O=roptsOf(RB[RBT],RBT); let off=O.docsOff.filter(x=>x!==id); if(!chk) off.push(id); const n={...O,docsOff:off}; delete n.docs; RB[RBT].opts=n; render(); }
 function rbOpt(k,v){ RB[RBT].opts={...roptsOf(RB[RBT],RBT),[k]:v}; render(); }
 VIEWS.settings = ()=>{
   const s=Store.settings, si=s.school_info||{}, T=[['rubric','ข้อคำถาม A/B/C'],['tfiles','📤 ช่องอัปโหลดฝั่งครู'],['clear','🧹 ล้างข้อมูล'],['demo','🧪 ข้อมูลจำลอง'],['year','ภาคเรียน/ปีการศึกษา'],['school','สถานศึกษา & คาบเรียน'],['storage','💾 พื้นที่จัดเก็บ'],['export','📤 ส่งออกข้อมูลประเมิน'],['docs','📄 ตัวอย่างเอกสาร'],['regen','♻️ สร้างเอกสารใหม่'],['theme','ธีมสี'],['maint','⛔ ปิดการใช้งานชั่วคราว'],['update','🔄 อัปเดตระบบ']];
@@ -1940,7 +1943,7 @@ VIEWS.settings = ()=>{
        +row(O.files>0,"rbOpt('files',this.checked?1:0)",'ให้แนบไฟล์ PDF',O.files>0?'<span class="muted" style="margin-left:8px">จำนวนไฟล์</span>'+cnt('files',3):'','ตัวอย่าง: อยากเก็บใบงานหรือเอกสารที่ครูใช้สอนในคาบนั้นไว้กับผลประเมิน ให้ติ๊กข้อนี้ แล้วเลือกจำนวนไฟล์')+(O.files>0?who('upF','ไฟล์ PDF')+((O.photos>0&&O.upP!==O.upF)?'<div class="muted" style="font-size:12.5px;margin:-4px 0 8px 26px">แบบผสม: ส่วนที่ครูอัปโหลดจะมาจากผลงานที่ครูส่ง ส่วนที่ ศน. อัปโหลดให้แนบในหน้าประเมินตามปกติ</div>':''):'')
        +(((O.photos>0&&O.upP==='teacher')||(O.files>0&&O.upF==='teacher'))?`<label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0 0 10px 26px;font-size:13.5px"><input type="checkbox" style="width:auto" ${O.wsubj?'checked':''} onchange="rbOpt('wsubj',this.checked)">ให้ครูระบุ <b>รายวิชาและชั้น</b> ในหน้า “ส่งผลงาน” ด้วย <span class="muted">(ไม่ติ๊ก = ไม่ถาม)</span></label>`:'')
        +row(O.plan,"rbOpt('plan',this.checked)",'ให้เลือกแผนที่ครูส่งมาประเมิน','','ตัวอย่าง: แบบประเมินแผนการจัดการเรียนรู้ จะมีรายการแผนที่ครูส่งมา กดเลือกแผนแล้วเปิดดูแผนไปพร้อมกับให้คะแนนได้เลย')
-       +(O.plan?row(O.docsOn,"rbOpt('docsOn',this.checked)",'แสดงไฟล์ที่ครูแนบกับแผน ในหน้าประเมิน','','ค่าเริ่มต้น = เปิด (แผน บันทึกหลังสอน ใบงาน ฯลฯ) ถ้าปิด หน้าประเมินและตารางแผนที่รอประเมินของแบบนี้จะไม่แสดงไฟล์ของครู')+(O.docsOn?`<div style="margin:0 0 8px 26px"><div style="font-size:13px"><b>ไฟล์ของครูที่ให้เปิดดูได้ในหน้าประเมิน</b> <span class="muted">(ติ๊กได้หลายไฟล์ ไม่ติ๊กจะไม่แสดงในแบบนี้)</span></div>${tfOn().map(b=>`<label style="display:inline-flex;gap:6px;align-items:center;margin:4px 14px 0 0;cursor:pointer"><input type="checkbox" style="width:auto" ${O.docsOff.indexOf(b.id)<0?'checked':''} onchange="rbDoc('${b.id}',this.checked)">${esc(tfShort(b))}</label>`).join('')}<div class="muted" style="font-size:12.5px;margin-top:4px">ตัวอย่าง: นอกจากแผนฯ ถ้าครูแนบ “ใบงาน” หรือ “สื่อการสอน” มาด้วย ติ๊กไว้ ท่านจะเปิดดูไฟล์เหล่านั้นได้จากหน้าประเมินเลย (แอดมินระบบเพิ่มช่องไฟล์ได้ที่ ตั้งค่า → ช่องอัปโหลดฝั่งครู)</div></div>`:''):'')
+       +(O.plan?`<div style="margin:0 0 8px 26px"><div style="font-size:13px"><b>ช่องไฟล์ของครู (ใช้ตรรกะเดียวกันทั้งสองฝั่ง)</b> <span class="muted">ติ๊ก = ครูเห็นช่องอัปโหลดนี้ในหน้า “ส่งแผน” และ ศน. เปิดดูได้ในหน้าประเมิน · ไม่ติ๊ก = ซ่อนทั้งสองที่</span></div>${tfOn().map(b=>`<label style="display:inline-flex;gap:6px;align-items:center;margin:4px 14px 0 0;cursor:pointer"><input type="checkbox" style="width:auto" ${O.docsOff.indexOf(b.id)<0?'checked':''} onchange="rbDoc('${b.id}',this.checked)">${esc(tfShort(b))}</label>`).join('')}<div class="muted" style="font-size:12.5px;margin-top:4px">ตัวอย่าง: ถ้าให้ครูส่งแค่แผน ให้เอาติ๊ก “หลังสอน” ออก ครูจะไม่เห็นช่องบันทึกหลังสอนในหน้าส่งแผน แล้วไปสร้างแบบประเมินอีกแบบสำหรับบันทึกหลังสอนแทน · นอกจากแผนฯ ถ้าครูแนบ “ใบงาน” หรือ “สื่อการสอน” มาด้วย ติ๊กไว้ ท่านจะเปิดดูไฟล์เหล่านั้นได้จากหน้าประเมินเลย (แอดมินระบบเพิ่มช่องไฟล์ได้ที่ ตั้งค่า → ช่องอัปโหลดฝั่งครู)</div></div>`:'')
        +row(O.rank,"rbOpt('rank',this.checked)",'แสดงวิทยฐานะของครู','','ตัวอย่าง: ถ้าอยากให้ผลประเมินระบุวิทยฐานะของครู เช่น ชำนาญการ ให้ติ๊กข้อนี้ (ระบบดึงจากข้อมูลครูให้อัตโนมัติ)')+'</div>'; })()}
      ${R.cats.map((c,ci)=>`<div class="acc-h" style="cursor:default"><input value="${esc(c.name)}" onchange="RB.${RBT}.cats[${ci}].name=this.value" style="font-weight:600"><button class="btn sm del" onclick="RB.${RBT}.cats.splice(${ci},1);render()">ลบหมวด</button></div>
        ${c.items.map((x,ii)=>`<div class="row" style="margin:4px 0 4px 20px"><span class="muted" style="width:28px">${ii+1}.</span><input value="${esc(x)}" onchange="RB.${RBT}.cats[${ci}].items[${ii}]=this.value" style="flex:1"><button class="btn sm del" onclick="RB.${RBT}.cats[${ci}].items.splice(${ii},1);render()">✕</button></div>`).join('')}
