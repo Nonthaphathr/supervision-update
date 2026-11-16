@@ -432,7 +432,7 @@ const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
 const APP_VERSION = '1.3.33';
 const APP_CHANGELOG = [
-  {v:'1.3.33', d:'16 พ.ย. 2569', n:['มีปุ่ม “🔓 ปลดล็อก” ให้ ศน. ปล่อยแผน/ผลงานที่ค้าง “กำลังประเมิน” กลับเป็นรอประเมิน','ศน. กด “ดึงเข้าฟอร์ม” จะมี modal เตือนว่าเริ่มประเมินแล้วครูแก้ไข/อัปไฟล์ไม่ได้ (สถานะ → กำลังประเมิน); ครูมี modal แจ้งก่อนอัปไฟล์','แบบประเมินแผน: ติ๊กช่องไฟล์ของครู (แผน/หลังสอน/อื่น ๆ) แล้วผูกกับหน้า “ส่งแผน” ของครูด้วย — ไม่ติ๊ก = ซ่อนช่องอัปโหลดนั้น (ค่าเริ่มต้น = แสดงทั้งหมดเหมือนเดิม)','เกียรติบัตร PDF: แก้ลายเซ็นติดกรอบดำ (ดึงไฟล์ลายเซ็นต้นฉบับจาก Drive เพื่อคงพื้นโปร่งใส)']},
+  {v:'1.3.33', d:'16 พ.ย. 2569', n:['ประวัติการประเมิน: เพิ่มตัวกรองโรงเรียน','ลายเซ็นแบบวาด: แก้ติดขอบดำในเอกสาร/PDF ทั้งหมด (ใช้ไฟล์ต้นฉบับ ต้องอัป Code.gs 1.3.33 ด้วย)','มีปุ่ม “🔓 ปลดล็อก” ให้ ศน. ปล่อยแผน/ผลงานที่ค้าง “กำลังประเมิน” กลับเป็นรอประเมิน','ศน. กด “ดึงเข้าฟอร์ม” จะมี modal เตือนว่าเริ่มประเมินแล้วครูแก้ไข/อัปไฟล์ไม่ได้ (สถานะ → กำลังประเมิน); ครูมี modal แจ้งก่อนอัปไฟล์','แบบประเมินแผน: ติ๊กช่องไฟล์ของครู (แผน/หลังสอน/อื่น ๆ) แล้วผูกกับหน้า “ส่งแผน” ของครูด้วย — ไม่ติ๊ก = ซ่อนช่องอัปโหลดนั้น (ค่าเริ่มต้น = แสดงทั้งหมดเหมือนเดิม)','เกียรติบัตร PDF: แก้ลายเซ็นติดกรอบดำ (ดึงไฟล์ลายเซ็นต้นฉบับจาก Drive เพื่อคงพื้นโปร่งใส)']},
   {v:'1.3.32', d:'15 พ.ย. 2569', n:['ยกเลิกผลการประเมินได้ 2 แบบ: ส่งกลับไปรอประเมิน (แผน/ผลงานกลับไปให้ประเมินใหม่) หรือ ลบรายการออกจากระบบ','รายการที่ถูกส่งกลับ แสดง “ยกเลิกและส่งกลับเมื่อ…” และเมื่อครูแก้ไข/อัปไฟล์ใหม่ แสดง “แก้ไขเมื่อ…” สีเขียว']},
   {v:'1.3.31', d:'15 พ.ย. 2569', n:['ประวัติการประเมิน: ศน./แอดมินระบบ ติ๊กเลือกแล้วลบผลการประเมินทีละหลายรายการได้','ครูกด “ยกเลิก” ผลการประเมินพร้อมระบุเหตุผล ส่งไปที่เมนู “ครูแจ้งยกเลิก” ของ ศน./แอดมินระบบ','ตารางประวัติของครู แสดงเอกสารเฉพาะแบบประเมินที่ให้แนบเอกสาร/รูป']},
   {v:'1.3.30', d:'14 พ.ย. 2569', n:['ศน.: เมนู “คัดลอกข้อความแจ้งผู้บริหาร” ขึ้นเมื่อมีโรงเรียนนิเทศครบถ้วน พร้อมลิงก์รายงานสรุปผลฉบับสมบูรณ์ของโรงเรียน','เพิ่มคู่มือผู้บริหาร และปรับปรุงคู่มือ ศน.']},
@@ -696,15 +696,14 @@ function sigPix(q,w,h){ const at=(x,y)=>{ const k=(y*w+x)*4; return [q[k],q[k+1]
     else { const m=Math.min(q[k],q[k+1],q[k+2]); if(m>=235) q[k+3]=0; else if(m>195) q[k+3]=Math.round(q[k+3]*(235-m)/40); } } }
 /* ดึงไฟล์ลายเซ็นต้นฉบับจาก Drive (ผ่านเซิร์ฟเวอร์) เพื่อคงพื้นโปร่งใส */
 const SIGO={};
-async function sigOrig(url){ if(!url||MODE!=='gas'||/^data:/.test(url)) return /^data:/.test(url||'')?url:''; if(url in SIGO) return SIGO[url];
-  try{ const r=await gasCall('apiImageData',Store.token,url); SIGO[url]=(r&&r.data)||''; }catch(e){ SIGO[url]=''; } return SIGO[url]; }
+function sigOrig(url){ if(!url||MODE!=='gas'||/^data:/.test(url)) return Promise.resolve(/^data:/.test(url||'')?url:''); if(!SIGO[url]) SIGO[url]=gasCall('apiImageData',Store.token,url).then(r=>(r&&r.data)||'').catch(()=>''); return SIGO[url]; }
 function sigClean(url){ if(!url) return Promise.resolve(''); if(SIGC[url]) return Promise.resolve(SIGC[url]);
-  return new Promise(res=>{ const i=new Image(); i.crossOrigin='anonymous';
+  return sigOrig(url).then(o=>new Promise(res=>{ const src=o||url; const i=new Image(); i.crossOrigin='anonymous';
     i.onload=()=>{ try{ const w=Math.min(i.naturalWidth||600,800), h=Math.max(1,Math.round((i.naturalHeight||600)*w/(i.naturalWidth||600)));
       const c=document.createElement('canvas'); c.width=w; c.height=h; const x=c.getContext('2d'); x.drawImage(i,0,0,w,h);
       const d=x.getImageData(0,0,w,h); sigPix(d.data,w,h);
       x.putImageData(d,0,0); SIGC[url]=c.toDataURL('image/png'); }catch(err){ SIGC[url]=''; } res(SIGC[url]||driveImageUrl(url,800)); };
-    i.onerror=()=>res(driveImageUrl(url,800)); i.src=/^data:/.test(url)?url:driveImageUrl(url,800); }); }
+    i.onerror=()=>res(driveImageUrl(url,800)); i.src=/^data:/.test(src)?src:driveImageUrl(src,800); })); }
 const sigSrc=(u,w)=>u?(SIGC[u]||driveImageUrl(u,w||600)):'';
 const sigImg=(u,css)=>u?`<img src="${esc(sigSrc(u))}" data-sig="${esc(u)}" style="${css}">`:'';
 new MutationObserver(()=>{ document.querySelectorAll('img[data-sig]:not([data-sc])').forEach(im=>{ im.setAttribute('data-sc','1'); const u=im.getAttribute('data-sig'); if(SIGC[u]){ im.src=SIGC[u]; return; } sigClean(u).then(d=>{ if(d) im.src=d; }); }); })
@@ -1395,7 +1394,7 @@ async function resultPdf(id){ const e=Store.data.Evaluations[id]; if(!e) return;
   saveBlob(new Blob([b64ToBytes(b64)],{type:'application/pdf'}),clean('เอกสารผลการประเมิน_'+uname(e.teacher_id)+'_ภาคเรียนที่ '+e.term+'-'+e.year)+'.pdf'); toast('ดาวน์โหลดเอกสารผลการประเมินแล้ว (แบบ '+L.map(x=>x.type).join(', ')+')'); }
 
 /* ---------- History ---------- */
-let HF={q:'',year:'',term:'',type:''};
+let HF={q:'',year:'',term:'',type:'',school:''};
 function planOf(tid,term,year,pid){ const L=Store.data.LessonPlans||{}; if(pid&&L[pid]) return L[pid]; if(!tid) return null;
   return Object.values(L).filter(p=>p.teacher_id===tid&&(!term||String(p.term)===String(term))&&(!year||String(p.year)===String(year))).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''))[0]||null; }
 function attChips(e){ const f=(e.files||[]).filter(Boolean), ph=(e.photos||[]).filter(Boolean);
@@ -1419,11 +1418,12 @@ function evalTable(E,actions){
      <td><div class="row nw"><button class="btn sm" title="พิมพ์" onclick="printEval(Store.data.Evaluations['${e.eval_id}'])">🖨️</button>${staff?`${cxReq(e)?`<span class="badge" style="background:#FEE2E2;color:#B91C1C;white-space:nowrap" title="${esc((e.cancel||{}).reason||'')}">ครูแจ้งยกเลิก</span>`:''}<button class="btn sm del" title="ลบ" onclick="delEval('${e.eval_id}')">🗑</button>`:cxCell(e)}</div></td>`:''}</tr>`).join('')}</tbody></table></div>`;
 }
 VIEWS.history = ()=>{
-  const all=Object.values(Store.data.Evaluations).filter(e=>!isSelfView()||e.teacher_id===Store.user.username), years=[...new Set(all.map(e=>e.year))].sort();
-  const E=all.filter(e=>(!HF.q||uname(e.teacher_id).includes(HF.q)||(e.subject||'').includes(HF.q))&&(!HF.year||e.year===HF.year)&&(!HF.term||e.term===HF.term)&&(!HF.type||e.type===HF.type))
+  const all=Object.values(Store.data.Evaluations).filter(e=>!isSelfView()||e.teacher_id===Store.user.username), years=[...new Set(all.map(e=>e.year))].sort(), schs=[...new Set(all.map(schOf))].sort((a,b)=>a.localeCompare(b,'th')), showSch=!isSelfView()&&schs.length>0;
+  const E=all.filter(e=>(!HF.school||schOf(e)===HF.school)&&(!HF.q||uname(e.teacher_id).includes(HF.q)||(e.subject||'').includes(HF.q))&&(!HF.year||e.year===HF.year)&&(!HF.term||e.term===HF.term)&&(!HF.type||e.type===HF.type))
     .sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  return `<div class="card glass reveal"><div class="grid g4">
+  return `<div class="card glass reveal"><div class="grid g4" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">
     <input placeholder="🔍 ค้นหาชื่อครู / วิชา" value="${esc(HF.q)}" oninput="HF.q=this.value;clearTimeout(window._ht);window._ht=setTimeout(()=>{render();const i=document.querySelector('#view input');i.focus();i.setSelectionRange(99,99)},300)">
+    ${showSch?`<select onchange="HF.school=this.value;render()">${opt([['','ทุกโรงเรียน'],...schs],HF.school)}</select>`:''}
     <select onchange="HF.year=this.value;render()">${opt([['','ทุกปีการศึกษา'],...years],HF.year)}</select>
     <select onchange="HF.term=this.value;render()">${opt([['','ทุกภาคเรียน'],['1','ภาคเรียนที่ 1'],['2','ภาคเรียนที่ 2']],HF.term)}</select>
     <select onchange="HF.type=this.value;render()">${opt([['','ทุกแบบประเมิน'],['A',rlabel('A')],['B',rlabel('B')],['C',rlabel('C')]],HF.type)}</select></div>
