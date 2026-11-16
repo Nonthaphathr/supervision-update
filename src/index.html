@@ -430,8 +430,9 @@ const SW = {
 const cleanUn=x=>String(x==null?'':x).replace(/[\s\u00A0\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g,'');
 const UN_OK=/^[\p{L}\p{M}\p{N}._@\-]{1,40}$/u;
 /* เวอร์ชันระบบ + ประวัติอัปเดต (ปรับเลขนี้ทุกครั้งที่ออกเวอร์ชันใหม่ ให้ตรงกับ version.json ในหน้าศูนย์อัปเดต) */
-const APP_VERSION = '1.3.32';
+const APP_VERSION = '1.3.33';
 const APP_CHANGELOG = [
+  {v:'1.3.33', d:'16 พ.ย. 2569', n:['แบบประเมินแผน: เพิ่มสวิตช์ เปิด/ปิด “แสดงไฟล์ที่ครูแนบ” ในหน้าประเมิน (ค่าเริ่มต้น = เปิด เหมือนเดิม)','เกียรติบัตร PDF: แก้ลายเซ็นติดกรอบดำ (ดึงไฟล์ลายเซ็นต้นฉบับจาก Drive เพื่อคงพื้นโปร่งใส)']},
   {v:'1.3.32', d:'15 พ.ย. 2569', n:['ยกเลิกผลการประเมินได้ 2 แบบ: ส่งกลับไปรอประเมิน (แผน/ผลงานกลับไปให้ประเมินใหม่) หรือ ลบรายการออกจากระบบ','รายการที่ถูกส่งกลับ แสดง “ยกเลิกและส่งกลับเมื่อ…” และเมื่อครูแก้ไข/อัปไฟล์ใหม่ แสดง “แก้ไขเมื่อ…” สีเขียว']},
   {v:'1.3.31', d:'15 พ.ย. 2569', n:['ประวัติการประเมิน: ศน./แอดมินระบบ ติ๊กเลือกแล้วลบผลการประเมินทีละหลายรายการได้','ครูกด “ยกเลิก” ผลการประเมินพร้อมระบุเหตุผล ส่งไปที่เมนู “ครูแจ้งยกเลิก” ของ ศน./แอดมินระบบ','ตารางประวัติของครู แสดงเอกสารเฉพาะแบบประเมินที่ให้แนบเอกสาร/รูป']},
   {v:'1.3.30', d:'14 พ.ย. 2569', n:['ศน.: เมนู “คัดลอกข้อความแจ้งผู้บริหาร” ขึ้นเมื่อมีโรงเรียนนิเทศครบถ้วน พร้อมลิงก์รายงานสรุปผลฉบับสมบูรณ์ของโรงเรียน','เพิ่มคู่มือผู้บริหาร และปรับปรุงคู่มือ ศน.']},
@@ -519,7 +520,7 @@ const RKINDS = {teach:'ประเมินการสอน (สังเก�
    ถ้าไม่ได้ตั้ง ใช้ค่าเริ่มต้นตามประเภทแบบ (ระบบเดิมจึงทำงานเหมือนเดิม) */
 const ROPT_DEF = {teach:{photos:2,files:0,plan:false,rank:false,upP:'sup',upF:'sup'}, visit:{photos:2,files:0,plan:false,rank:false,upP:'sup',upF:'sup'}, plan:{photos:0,files:0,plan:true,rank:true,upP:'sup',upF:'sup'}};
 function roptsOf(r,t){ const d=ROPT_DEF[kindOfRub(r,t)], o=(r&&r.opts)||{}, cl=(v,a,b,x)=>{ v=Math.round(+v); return isFinite(v)?Math.max(a,Math.min(b,v)):x; };
-  return {photos:o.photos!=null?cl(o.photos,0,4,d.photos):d.photos, files:o.files!=null?cl(o.files,0,3,d.files):d.files, plan:o.plan!=null?!!o.plan:d.plan, rank:o.rank!=null?!!o.rank:d.rank, upP:(o.upP||o.up)==='teacher'?'teacher':'sup', upF:(o.upF||o.up)==='teacher'?'teacher':'sup', wsubj:!!o.wsubj, docsOff:Array.isArray(o.docsOff)?o.docsOff.filter(x=>typeof x==='string').slice(0,12):(Array.isArray(o.docs)?tfOn().map(b=>b.id).filter(x=>o.docs.indexOf(x)<0):[])}; }
+  return {photos:o.photos!=null?cl(o.photos,0,4,d.photos):d.photos, files:o.files!=null?cl(o.files,0,3,d.files):d.files, plan:o.plan!=null?!!o.plan:d.plan, rank:o.rank!=null?!!o.rank:d.rank, upP:(o.upP||o.up)==='teacher'?'teacher':'sup', upF:(o.upF||o.up)==='teacher'?'teacher':'sup', wsubj:!!o.wsubj, docsOn:o.docsOn!==false, docsOff:o.docsOn===false?tfOn().map(b=>b.id):(Array.isArray(o.docsOff)?o.docsOff.filter(x=>typeof x==='string').slice(0,12):(Array.isArray(o.docs)?tfOn().map(b=>b.id).filter(x=>o.docs.indexOf(x)<0):[]))}; }
 const ropts = t=>roptsOf(rub(t),t);
 function kindOfRub(r,t){ if(r&&RKINDS[r.kind]) return r.kind; const n=String((r&&r.name)||'');
   const dk=(DEFAULT_RUBRICS[t]||{}).kind||'teach';
@@ -687,12 +688,21 @@ function viewPdf(url,title){ if(!url) return SW.err('ไม่มีไฟล์
 
 /* ลายเซ็นพื้นขาว → ทำพื้นโปร่งใสตอนแสดงผล (ไม่แก้ไฟล์ต้นฉบับ) */
 const SIGC={};
+/* ทำพื้นลายเซ็นให้โปร่งใส: พื้นขาว → โปร่งใส; ถ้าพื้นเป็นสีดำทึบ (ภาพย่อของ Drive ทำ PNG โปร่งใสให้ติดพื้นดำ) → ตัดสีดำออก */
+function sigPix(q,w,h){ const at=(x,y)=>{ const k=(y*w+x)*4; return [q[k],q[k+1],q[k+2],q[k+3]]; };
+  const cs=[at(1,1),at(w-2,1),at(1,h-2),at(w-2,h-2)], blk=cs.every(c=>c[3]>200&&Math.max(c[0],c[1],c[2])<28);
+  for(let k=0;k<q.length;k+=4){
+    if(blk){ const mx=Math.max(q[k],q[k+1],q[k+2]); if(mx<30) q[k+3]=0; else if(mx<60) q[k+3]=Math.round(q[k+3]*(mx-30)/30); }
+    else { const m=Math.min(q[k],q[k+1],q[k+2]); if(m>=235) q[k+3]=0; else if(m>195) q[k+3]=Math.round(q[k+3]*(235-m)/40); } } }
+/* ดึงไฟล์ลายเซ็นต้นฉบับจาก Drive (ผ่านเซิร์ฟเวอร์) เพื่อคงพื้นโปร่งใส */
+const SIGO={};
+async function sigOrig(url){ if(!url||MODE!=='gas'||/^data:/.test(url)) return /^data:/.test(url||'')?url:''; if(url in SIGO) return SIGO[url];
+  try{ const r=await gasCall('apiImageData',Store.token,url); SIGO[url]=(r&&r.data)||''; }catch(e){ SIGO[url]=''; } return SIGO[url]; }
 function sigClean(url){ if(!url) return Promise.resolve(''); if(SIGC[url]) return Promise.resolve(SIGC[url]);
   return new Promise(res=>{ const i=new Image(); i.crossOrigin='anonymous';
     i.onload=()=>{ try{ const w=Math.min(i.naturalWidth||600,800), h=Math.max(1,Math.round((i.naturalHeight||600)*w/(i.naturalWidth||600)));
       const c=document.createElement('canvas'); c.width=w; c.height=h; const x=c.getContext('2d'); x.drawImage(i,0,0,w,h);
-      const d=x.getImageData(0,0,w,h), q=d.data;
-      for(let k=0;k<q.length;k+=4){ const m=Math.min(q[k],q[k+1],q[k+2]); if(m>=235) q[k+3]=0; else if(m>195) q[k+3]=Math.round(q[k+3]*(235-m)/40); }
+      const d=x.getImageData(0,0,w,h); sigPix(d.data,w,h);
       x.putImageData(d,0,0); SIGC[url]=c.toDataURL('image/png'); }catch(err){ SIGC[url]=''; } res(SIGC[url]||driveImageUrl(url,800)); };
     i.onerror=()=>res(driveImageUrl(url,800)); i.src=/^data:/.test(url)?url:driveImageUrl(url,800); }); }
 const sigSrc=(u,w)=>u?(SIGC[u]||driveImageUrl(u,w||600)):'';
@@ -1911,7 +1921,7 @@ function tfAdd(){ TFB.push({id:'tf'+Date.now().toString(36).slice(-6),label:'ไ
 async function tfDel(i){ if(!(await SW.confirm('ลบช่องนี้?','เมื่อกด 💾 บันทึก ไฟล์ที่ครูเคยแนบในช่องนี้จะถูกย้ายลงถังขยะของ Drive และหายจากแผนของครู ถ้าแค่ไม่อยากให้ครูเห็นช่อง ให้ใช้ “ซ่อน” แทน (เอาติ๊ก “แสดง” ออก) ไฟล์จะยังอยู่ครบ'))) return; TFB.splice(i,1); render(); }
 function tfReset(){ TFB=TF_CORE.map(d=>({id:d.id,label:d.label,type:'pdf',on:true,core:true})); render(); }
 async function tfSave(){ const L=TFB.map(b=>({id:b.id,label:String(b.label||'').trim().slice(0,60)||((TF_CORE.find(d=>d.id===b.id)||{}).label)||'ไฟล์เอกสาร',type:b.core?'pdf':b.type,on:!!b.on})); await saveSet({teacher_files:L}); }
-function rbDoc(id,chk){ const O=roptsOf(RB[RBT],RBT); let off=O.docsOff.filter(x=>x!==id); if(!chk) off.push(id); const n={...O,docsOff:off}; delete n.docs; RB[RBT].opts=n; render(); }
+function rbDoc(id,chk){ const O=roptsOf(RB[RBT],RBT); let off=O.docsOff.filter(x=>x!==id); if(!chk) off.push(id); const n={...O,docsOff:off,docsOn:true}; delete n.docs; RB[RBT].opts=n; render(); }
 function rbOpt(k,v){ RB[RBT].opts={...roptsOf(RB[RBT],RBT),[k]:v}; render(); }
 VIEWS.settings = ()=>{
   const s=Store.settings, si=s.school_info||{}, T=[['rubric','ข้อคำถาม A/B/C'],['tfiles','📤 ช่องอัปโหลดฝั่งครู'],['clear','🧹 ล้างข้อมูล'],['demo','🧪 ข้อมูลจำลอง'],['year','ภาคเรียน/ปีการศึกษา'],['school','สถานศึกษา & คาบเรียน'],['storage','💾 พื้นที่จัดเก็บ'],['export','📤 ส่งออกข้อมูลประเมิน'],['docs','📄 ตัวอย่างเอกสาร'],['regen','♻️ สร้างเอกสารใหม่'],['theme','ธีมสี'],['maint','⛔ ปิดการใช้งานชั่วคราว'],['update','🔄 อัปเดตระบบ']];
@@ -1930,7 +1940,7 @@ VIEWS.settings = ()=>{
        +row(O.files>0,"rbOpt('files',this.checked?1:0)",'ให้แนบไฟล์ PDF',O.files>0?'<span class="muted" style="margin-left:8px">จำนวนไฟล์</span>'+cnt('files',3):'','ตัวอย่าง: อยากเก็บใบงานหรือเอกสารที่ครูใช้สอนในคาบนั้นไว้กับผลประเมิน ให้ติ๊กข้อนี้ แล้วเลือกจำนวนไฟล์')+(O.files>0?who('upF','ไฟล์ PDF')+((O.photos>0&&O.upP!==O.upF)?'<div class="muted" style="font-size:12.5px;margin:-4px 0 8px 26px">แบบผสม: ส่วนที่ครูอัปโหลดจะมาจากผลงานที่ครูส่ง ส่วนที่ ศน. อัปโหลดให้แนบในหน้าประเมินตามปกติ</div>':''):'')
        +(((O.photos>0&&O.upP==='teacher')||(O.files>0&&O.upF==='teacher'))?`<label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0 0 10px 26px;font-size:13.5px"><input type="checkbox" style="width:auto" ${O.wsubj?'checked':''} onchange="rbOpt('wsubj',this.checked)">ให้ครูระบุ <b>รายวิชาและชั้น</b> ในหน้า “ส่งผลงาน” ด้วย <span class="muted">(ไม่ติ๊ก = ไม่ถาม)</span></label>`:'')
        +row(O.plan,"rbOpt('plan',this.checked)",'ให้เลือกแผนที่ครูส่งมาประเมิน','','ตัวอย่าง: แบบประเมินแผนการจัดการเรียนรู้ จะมีรายการแผนที่ครูส่งมา กดเลือกแผนแล้วเปิดดูแผนไปพร้อมกับให้คะแนนได้เลย')
-       +(O.plan?`<div style="margin:0 0 8px 26px"><div style="font-size:13px"><b>ไฟล์ของครูที่ให้เปิดดูได้ในหน้าประเมิน</b> <span class="muted">(ติ๊กได้หลายไฟล์ ไม่ติ๊กจะไม่แสดงในแบบนี้)</span></div>${tfOn().map(b=>`<label style="display:inline-flex;gap:6px;align-items:center;margin:4px 14px 0 0;cursor:pointer"><input type="checkbox" style="width:auto" ${O.docsOff.indexOf(b.id)<0?'checked':''} onchange="rbDoc('${b.id}',this.checked)">${esc(tfShort(b))}</label>`).join('')}<div class="muted" style="font-size:12.5px;margin-top:4px">ตัวอย่าง: นอกจากแผนฯ ถ้าครูแนบ “ใบงาน” หรือ “สื่อการสอน” มาด้วย ติ๊กไว้ ท่านจะเปิดดูไฟล์เหล่านั้นได้จากหน้าประเมินเลย (แอดมินระบบเพิ่มช่องไฟล์ได้ที่ ตั้งค่า → ช่องอัปโหลดฝั่งครู)</div></div>`:'')
+       +(O.plan?row(O.docsOn,"rbOpt('docsOn',this.checked)",'แสดงไฟล์ที่ครูแนบกับแผน ในหน้าประเมิน','','ค่าเริ่มต้น = เปิด (แผน บันทึกหลังสอน ใบงาน ฯลฯ) ถ้าปิด หน้าประเมินและตารางแผนที่รอประเมินของแบบนี้จะไม่แสดงไฟล์ของครู')+(O.docsOn?`<div style="margin:0 0 8px 26px"><div style="font-size:13px"><b>ไฟล์ของครูที่ให้เปิดดูได้ในหน้าประเมิน</b> <span class="muted">(ติ๊กได้หลายไฟล์ ไม่ติ๊กจะไม่แสดงในแบบนี้)</span></div>${tfOn().map(b=>`<label style="display:inline-flex;gap:6px;align-items:center;margin:4px 14px 0 0;cursor:pointer"><input type="checkbox" style="width:auto" ${O.docsOff.indexOf(b.id)<0?'checked':''} onchange="rbDoc('${b.id}',this.checked)">${esc(tfShort(b))}</label>`).join('')}<div class="muted" style="font-size:12.5px;margin-top:4px">ตัวอย่าง: นอกจากแผนฯ ถ้าครูแนบ “ใบงาน” หรือ “สื่อการสอน” มาด้วย ติ๊กไว้ ท่านจะเปิดดูไฟล์เหล่านั้นได้จากหน้าประเมินเลย (แอดมินระบบเพิ่มช่องไฟล์ได้ที่ ตั้งค่า → ช่องอัปโหลดฝั่งครู)</div></div>`:''):'')
        +row(O.rank,"rbOpt('rank',this.checked)",'แสดงวิทยฐานะของครู','','ตัวอย่าง: ถ้าอยากให้ผลประเมินระบุวิทยฐานะของครู เช่น ชำนาญการ ให้ติ๊กข้อนี้ (ระบบดึงจากข้อมูลครูให้อัตโนมัติ)')+'</div>'; })()}
      ${R.cats.map((c,ci)=>`<div class="acc-h" style="cursor:default"><input value="${esc(c.name)}" onchange="RB.${RBT}.cats[${ci}].name=this.value" style="font-weight:600"><button class="btn sm del" onclick="RB.${RBT}.cats.splice(${ci},1);render()">ลบหมวด</button></div>
        ${c.items.map((x,ii)=>`<div class="row" style="margin:4px 0 4px 20px"><span class="muted" style="width:28px">${ii+1}.</span><input value="${esc(x)}" onchange="RB.${RBT}.cats[${ci}].items[${ii}]=this.value" style="flex:1"><button class="btn sm del" onclick="RB.${RBT}.cats[${ci}].items.splice(${ii},1);render()">✕</button></div>`).join('')}
@@ -2286,13 +2296,16 @@ const certIm=(u,t)=>u?(CERT_IMG[t+'|'+u]||driveImageUrl(u,t==='jpeg'?1700:600)):
 function certLoadImg(url,type,maxW){ const key=type+'|'+url;
   return new Promise(res=>{ if(!url) return res(''); if(CERT_IMG[key]) return res(CERT_IMG[key]);
     if(/^data:/.test(url)&&type!=='sig'){ CERT_IMG[key]=url; return res(url); }
-    const i=new Image(); i.crossOrigin='anonymous';
+    if(type==='sig'&&!(key in CERT_IMG)){ return sigOrig(url).then(d=>certLoadImg2(d||url,type,maxW,key,url,res)); }
+    certLoadImg2(url,type,maxW,key,url,res); });
+}
+function certLoadImg2(src,type,maxW,key,url,res){ { const i=new Image(); i.crossOrigin='anonymous';
     i.onload=()=>{ try{ const w=Math.min(i.naturalWidth||600,maxW), h=Math.round((i.naturalHeight||600)*w/(i.naturalWidth||600));
       const c=document.createElement('canvas'); c.width=w; c.height=h; const x=c.getContext('2d');
       if(type==='jpeg'){ x.fillStyle='#ffffff'; x.fillRect(0,0,w,h); } x.drawImage(i,0,0,w,h);
-      if(type==='sig'){ const d=x.getImageData(0,0,w,h), q=d.data; for(let k=0;k<q.length;k+=4){ const m=Math.min(q[k],q[k+1],q[k+2]); if(m>=235) q[k+3]=0; else if(m>195) q[k+3]=Math.round(q[k+3]*(235-m)/40); } x.putImageData(d,0,0); }
+      if(type==='sig'){ const d=x.getImageData(0,0,w,h); sigPix(d.data,w,h); x.putImageData(d,0,0); }
       CERT_IMG[key]=c.toDataURL(type==='jpeg'?'image/jpeg':'image/png',0.92); }catch(err){ CERT_IMG[key]=''; } res(CERT_IMG[key]||url); };
-    i.onerror=()=>res(url); i.src=/^data:/.test(url)?url:driveImageUrl(url,maxW); }); }
+    i.onerror=()=>res(url); i.src=/^data:/.test(src)?src:driveImageUrl(src,maxW); } }
 async function certPrep(rows){ const cfg=certCfg();
   await Promise.all([certLoadImg(cfg.bg,'jpeg',1700),certLoadImg(cfg.seal||logoSrc(300),'png',500),certLoadImg(cfg.s1.sig,'sig',500),certLoadImg(cfg.s2.sig,'sig',500),
     ...rows.map(r=>certLoadImg(r.ev&&r.ev.sig,'sig',500))]); return cfg; }

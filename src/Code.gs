@@ -771,6 +771,20 @@ function logoData_(src){
   }catch(e){ return ''; }
 }
 function apiLogoData(token){ me_(token); return JSON.stringify({ok:true, data:logoData_('')}); }
+/* ไฟล์ลายเซ็นต้นฉบับ (PNG โปร่งใส) เป็น data URL — ใช้สร้างเกียรติบัตร PDF; อนุญาตเฉพาะไฟล์ที่เป็นลายเซ็นของผู้ใช้/เกียรติบัตรในระบบ */
+function apiImageData(token, url){
+  me_(token);
+  const idOf = function(l){ return (String(l||'').match(/\/d\/([\w-]{10,})/) || String(l||'').match(/[?&]id=([\w-]{10,})/) || [])[1] || ''; };
+  const id = idOf(url); if (!id) return JSON.stringify({ok:true, data:''});
+  const ok = {}; const us = readColl_('Users');
+  Object.keys(us).forEach(function(k){ const i = idOf((us[k]||{}).signature_url); if (i) ok[i] = 1; });
+  const c = (getSettings_().cert||{}); [(c.s1||{}).sig, (c.s2||{}).sig].forEach(function(l){ const i = idOf(l); if (i) ok[i] = 1; });
+  if (!ok[id]) return JSON.stringify({ok:true, data:''});
+  try{ const b = DriveApp.getFileById(id).getBlob(), by = b.getBytes();
+    if (by.length > 900000 || String(b.getContentType()).indexOf('image/') !== 0) return JSON.stringify({ok:true, data:''});
+    return JSON.stringify({ok:true, data:'data:' + b.getContentType() + ';base64,' + Utilities.base64Encode(by)});
+  }catch(e){ return JSON.stringify({ok:true, data:''}); }
+}
 
 /* ---------------- PDF report (HTML -> PDF in Drive) ---------------- */
 // html สร้างจากหน้าเว็บ (มีตรา/ลายเซ็นเป็น URL) → แปลงรูปเป็น base64 ฝั่งเซิร์ฟเวอร์เพื่อให้ติดใน PDF
